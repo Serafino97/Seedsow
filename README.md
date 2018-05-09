@@ -12,6 +12,3 @@ Portal.dat file modified entries and patcher: https://mega.nz/#!xnJ01I5R!Sdo8lZa
 1.17 Binaries: https://mega.nz/#!1zQW1b5R!XymqD44dpDGX0sRva7MZ3OALclsdlhwG5JxnccHK4To
 
 License: https://raw.githubusercontent.com/bDekaru/ClassicDereth/master/LICENSE
-
-
-This is a test
