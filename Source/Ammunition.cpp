@@ -47,7 +47,7 @@ void CAmmunitionWeenie::MakeIntoAmmo()
 
 	SetPlacementFrame(Placement::Resting, TRUE);
 
-	_timeToRot = Timer::cur_time + 60.0;
+	_timeToRot = Timer::cur_time + 1.0;
 	_beganRot = false;
 	m_Qualities.SetFloat(TIME_TO_ROT_FLOAT, _timeToRot);
 }

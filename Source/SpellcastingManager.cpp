@@ -12,6 +12,10 @@
 #include "Client.h"
 #include "Config.h"
 #include "CombatFormulas.h"
+#include "RandomRange.h"
+#include "Random.h"
+#include <random>
+
 
 const float MAX_HEADING_TO_TARGET_FOR_CAST = 45.0f;
 const float MAX_TURN_TIME_FOR_CAST = 8.0f;
@@ -751,7 +755,7 @@ int CSpellcastingManager::LaunchSpellEffect()
 
 			fizzled = true;
 		}
-		else if (m_pWeenie->m_Position.distance(m_SpellCastData.initial_cast_position) >= 6.0)
+		else if (m_pWeenie->m_Position.distance(m_SpellCastData.initial_cast_position) >= 6.0 && m_pWeenie->m_Qualities.GetInt(PLAYER_KILLER_STATUS_INT, 0) == PK_PKStatus)
 		{
 			// fizzle
 			m_pWeenie->EmitEffect(PS_Fizzle, 0.542734265f);
@@ -781,10 +785,15 @@ int CSpellcastingManager::LaunchSpellEffect()
 						return WERROR_MAGIC_FIZZLE;
 
 					int compId = component->InqDIDQuality(SPELL_COMPONENT_DID, 0);
+					int spellPower = m_SpellCastData.spell->_power;
+					int currentSkill = m_SpellCastData.current_skill;
+
 					const SpellComponentBase *componentBase = pSpellComponents->InqSpellComponentBase(compId);
 					float burnChance = componentBase->_CDM * spellComponentLossMod;
-					for (int i = 0; i < iter->second; i++) // one chance to burn for every instance of the component in the spell formula
+					burnChance *= min(1.0, (double)spellPower / (double)currentSkill);
+					for (int i = 0; i < getRandomNumber(1, iter->second, eRandomFormula::favorMid, 1.5, 0); ++i)
 					{
+
 						if (Random::RollDice(0.0, 1.0) < burnChance)
 						{
 							component->DecrementStackOrStructureNum();
@@ -2269,7 +2278,32 @@ int CSpellcastingManager::GenerateManaCost()
 {
 	DWORD manaConvSkill = m_pWeenie->GetEffectiveManaConversionSkill();
 
-	return GetManaCost(m_SpellCastData.current_skill, m_SpellCastData.spell->_power, m_SpellCastData.spell->_base_mana, manaConvSkill);
+	int spellLevel = 0;
+	int scarab = m_SpellCastData.spell_formula._comps[0];
+	switch (scarab)
+	{
+	case 110: spellLevel = 6; break;
+	case 112: spellLevel = 7; break;
+	case 193: spellLevel = 8; break;
+	default:
+	{
+		if (scarab <= 110 && scarab > 0)
+		{
+			spellLevel = scarab;
+			break;
+		}
+		else
+		{
+			spellLevel = 1;
+			break;
+		}
+	}
+	}
+
+	int difficulty = 50 + (25 * (spellLevel - 1));
+
+	return GetManaCost(m_SpellCastData.current_skill, difficulty, m_SpellCastData.spell->_base_mana, manaConvSkill);
+
 }
 
 int CSpellcastingManager::TryBeginCast(DWORD target_id, DWORD spell_id)

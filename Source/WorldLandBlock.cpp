@@ -588,6 +588,13 @@ void CWorldLandBlock::ExchangePVS(CWeenieObject *pSource, WORD old_block_id)
 	if (!pSource)
 		return;
 
+	CWorldLandBlock *pBlock = pSource->GetBlock();
+	if (pBlock && (pSource->GetLandcell() & 0xFFFF) > 0x100) //if indoors only exchange data on this landblock.
+	{
+		pBlock->ExchangeData(pSource);
+	}
+	else
+
 	{
 		// outdoor exchange -- this should eventually become obselete
 

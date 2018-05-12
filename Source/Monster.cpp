@@ -1659,6 +1659,7 @@ void CMonsterWeenie::OnDeathAnimComplete()
 		player->_pendingCorpse->m_Qualities.RemoveBool(VISIBILITY_BOOL);
 		player->_pendingCorpse->NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
 		player->_pendingCorpse->NotifyObjectCreated(false);
+		player->_pendingCorpse->Save();
 		player->_pendingCorpse = NULL;
 	}
 }

@@ -201,7 +201,9 @@ int CVendor::TryBuyItemsFromPlayer(CPlayerWeenie *seller, const std::list<ItemPr
 		totalSlotsRequired = max(totalValue / maxStackSize, 1);
 	}
 
-	if (seller->Container_GetNumFreeMainPackSlots() < max(totalSlotsRequired - (int)desiredItems.size(), 1))
+	//if (seller->Container_GetNumFreeMainPackSlots() < max(totalSlotsRequired - (int)desiredItems.size(), 1)) -- This doesn't take in to account that the items are coming out of side packs, causes error when attempting to spawn pyreals into pack. Eats all items.
+	if (seller->Container_GetNumFreeMainPackSlots() < totalSlotsRequired)
+
 	{
 		seller->SendText("There's not enough room for the coins in your inventory.", LTT_DEFAULT);
 		return WERROR_NO_OBJECT;
