@@ -1896,10 +1896,10 @@ CLIENT_COMMAND(setname, "[name]", "Changes the last assessed target's name.", AD
 #ifndef PUBLIC_BUILD
 CLIENT_COMMAND(setmodel, "[monster]", "Changes your model to a monster.", ADMIN_ACCESS)
 {
-	pPlayer->SendText("Command disabled.", LTT_DEFAULT);
-	return false;
+	pPlayer->SendText("[monster]", "Changes your model to a monster.", LTT_DEFAULT);
+	return true;
 
-	/*
+	
 	if (!SpawningEnabled(pPlayer))
 	{
 		return false;
@@ -1970,7 +1970,7 @@ CLIENT_COMMAND(motion, "<index> [speed=1]", "Plays a sequenced animation.", BASI
 
 	return false;
 }
-*/
+
 
 void SendDungeonInfo(CPlayerWeenie* pPlayer, DungeonDesc_t* pInfo)
 {

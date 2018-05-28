@@ -327,15 +327,11 @@ bool CHouseWeenie::HasAccess(CPlayerWeenie *requester)
 
 	if (houseData->_allegianceAccess)
 	{
-		std::string alleg;
-		if (requester->m_Qualities.InqString(ALLEGIANCE_NAME_STRING, alleg)) {
+		AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
+		AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
 
-			AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
-			AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
-
-			if (ownerAllegianceNode->_monarchID == requesterAllegianceNode->_monarchID)
-				return true;
-		}
+		if (ownerAllegianceNode->_monarchID == requesterAllegianceNode->_monarchID)
+			return true;
 	}
 
 	return HasStorageAccess(requester); //storage access automatically grants access.
@@ -365,14 +361,11 @@ bool CHouseWeenie::HasStorageAccess(CPlayerWeenie *requester)
 
 	if (houseData->_allegianceStorageAccess)
 	{
-		std::string alleg;
-		if (requester->m_Qualities.InqString(ALLEGIANCE_NAME_STRING, alleg)) {
-			AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
-			AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
+		AllegianceTreeNode *ownerAllegianceNode = g_pAllegianceManager->GetTreeNode(houseOwnerId);
+		AllegianceTreeNode *requesterAllegianceNode = g_pAllegianceManager->GetTreeNode(requesterId);
 
-			if (ownerAllegianceNode->_monarchID == requesterAllegianceNode->_monarchID)
-				return true;
-		}
+		if (ownerAllegianceNode->_monarchID == requesterAllegianceNode->_monarchID)
+			return true;
 	}
 
 	return false;
@@ -1042,11 +1035,6 @@ void CSlumLordWeenie::RentHouse(CPlayerWeenie *player, const PackableList<DWORD>
 		}
 		DoUseResponse(player);
 		player->RecalculateCoinAmount();
-		player->Save();
-		if (house->ShouldSave())
-			house->Save();
-		houseData->Save();
-
 
 		if (CWeenieObject *owner = g_pWorld->FindObject(houseData->_ownerId))
 			g_pHouseManager->SendHouseData(owner->AsPlayer(), house->GetHouseDID()); //update house's owner panel if the owner is online.
