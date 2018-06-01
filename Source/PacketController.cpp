@@ -27,7 +27,7 @@ CPacketController::~CPacketController()
 	_outgoingMessageQueue.Lock();
 	for (auto entry : _outgoingMessageQueue)
 	{
-		delete [] entry.data;
+		delete[] entry.data;
 	}
 	_outgoingMessageQueue.clear();
 	_outgoingMessageQueue.Unlock();
@@ -41,7 +41,7 @@ CPacketController::~CPacketController()
 	m_out._fragQueue.Lock();
 	for (auto entry : m_out._fragQueue)
 	{
-		delete [] ((BYTE *)entry);
+		delete[]((BYTE *)entry);
 	}
 	m_out._fragQueue.clear();
 	m_out._fragQueue.Unlock();
@@ -148,7 +148,7 @@ void CPacketController::Cleanup()
 	{
 		if (it->first > m_in.activesequence)
 			break;
-			
+
 		DELETEBLOB(it->second);
 		it = m_in.blobstack.erase(it);
 	}
@@ -156,7 +156,7 @@ void CPacketController::Cleanup()
 	if (m_out.sequence >= 1000) // keep no more than 1000 cached
 	{
 		if ((m_out.sequence - 1000) > m_in.flushsequence)
-			m_in.flushsequence = m_out.sequence - 1000;		
+			m_in.flushsequence = m_out.sequence - 1000;
 	}
 
 	m_out._blobCache.Lock();
@@ -212,7 +212,7 @@ iterate:
 		DWORD dwCount = (DWORD)lostSequences.size();
 		CREATEBLOB(p, sizeof(DWORD) + dwCount * sizeof(DWORD));
 
-		*((DWORD *)p->data) = (DWORD) lostSequences.size();
+		*((DWORD *)p->data) = (DWORD)lostSequences.size();
 		DWORD *requestPos = ((DWORD *)p->data) + 1;
 
 		std::vector<DWORD>::iterator requestIt = lostSequences.begin();
@@ -247,7 +247,7 @@ void CPacketController::ThinkOutbound()
 	{
 		UpdatePeerTime();
 	}
-	
+
 	FlushQueuedNetMessages();
 	FlushFragments();
 }
@@ -262,7 +262,7 @@ void CPacketController::Think()
 
 	// Cleanup before we clutter the cache with new stuff.
 	Cleanup();
-	
+
 	// Handle the output last.
 	ThinkOutbound();
 
@@ -338,7 +338,7 @@ void CPacketController::EvilClient(const char* szSource, DWORD dwLine, BOOL bKil
 {
 #ifdef _DEBUG
 	if (szSource)
-		LOG(Temp, Normal, "Evil client @ %u of %s!!!\n", dwLine, szSource);
+		SERVER_INFO << "Evil client @" << dwLine << "of" << szSource << "!";
 #endif
 
 	if (bKill && IsAlive())
@@ -428,7 +428,7 @@ void CPacketController::ProcessBlob(BlobPacket_s *blob)
 					g_pNetwork->SendConnectlessBlob(m_pPeer, p, BT_DENY, NULL, GetElapsedTime());
 
 					DELETEBLOB(p);
-					
+
 					m_out.numdenied += dwDenySize;
 				}
 
@@ -499,7 +499,7 @@ void CPacketController::ProcessBlob(BlobPacket_s *blob)
 			FlagEvilClient();
 			return;
 		}
-		
+
 		m_in.flushsequence = *((DWORD *)pbData);
 
 		dwSize -= 4;
@@ -509,27 +509,27 @@ void CPacketController::ProcessBlob(BlobPacket_s *blob)
 	/*
 	if (dwFlags & BT_LOGIN)
 	{
-		if (m_out.loginsyncs < 0)
-			m_out.loginsyncs = 0;
+	if (m_out.loginsyncs < 0)
+	m_out.loginsyncs = 0;
 
-		return;
+	return;
 	}
 	*/
 
 	/*
 	if (dwFlags & BT_CONNECTIONACK) //0x00000040
 	{
-		if (m_out.loginsyncs >= 0)
-		{
-			m_out.loginsyncs++;
-			if (m_out.loginsyncs < 2)
-			{
-				m_in.lastactivity = g_pGlobals->Time();
-				// PerformLoginSync();
-			}
-		}
+	if (m_out.loginsyncs >= 0)
+	{
+	m_out.loginsyncs++;
+	if (m_out.loginsyncs < 2)
+	{
+	m_in.lastactivity = g_pGlobals->Time();
+	// PerformLoginSync();
+	}
+	}
 
-		return;
+	return;
 	}
 	*/
 
@@ -552,12 +552,12 @@ void CPacketController::ProcessBlob(BlobPacket_s *blob)
 
 			if ( (g_pGlobals->Time() + gear_tolerance) < *((double *)pbData) )
 			{
-				const char* account = m_pClient->GetAccount( );
-				SOCKADDR_IN *ip = m_pClient->GetHostAddress( );
+			const char* account = m_pClient->GetAccount( );
+			SOCKADDR_IN *ip = m_pClient->GetHostAddress( );
 
-				LOG(Temp, Normal, "Detected client(%s @ %s) using gear. Killing!\n", (account ? account : "???"), (ip ? inet_ntoa(ip->sin_addr) : "???") );
+			LOG(Temp, Normal, "Detected client(%s @ %s) using gear. Killing!\n", (account ? account : "???"), (ip ? inet_ntoa(ip->sin_addr) : "???") );
 
-				g_pNetwork->KickClient( m_pClient->GetIndex() );
+			g_pNetwork->KickClient( m_pClient->GetIndex() );
 			}
 
 			return;
@@ -602,7 +602,7 @@ void CPacketController::ProcessBlob(BlobPacket_s *blob)
 		m_out.blobcache.push_back(tupdate);
 		*/
 
-		CREATEBLOB(tupdate, sizeof(float)*2);
+		CREATEBLOB(tupdate, sizeof(float) * 2);
 		((float *)tupdate->data)[0] = echoValue;
 		((float *)tupdate->data)[1] = echoValue;
 
@@ -694,9 +694,9 @@ void CPacketController::ProcessBlob(BlobPacket_s *blob)
 					}
 				}
 
-				
+
 				if (!bCompleted)
-				{					
+				{
 					if (it == m_in.fragstack.end())
 					{
 						// No existing group matches, create one
@@ -755,15 +755,15 @@ void CPacketController::IncomingBlob(BlobPacket_s *blob, double recvTime)
 
 				if ((float)actualIntervals > (float)(expectedIntervals * 2.0))
 				{
-					LOG(Temp, Normal, "Possible speed hack on user: %s ([rate: %f]) Disconnecting.", m_pClient->GetDescription(), (double)actualIntervals / (double)expectedIntervals);
+					SERVER_ERROR << "Possible speed hack on user:" << m_pClient->GetDescription() << "([rate:" << ((double)actualIntervals / (double)expectedIntervals) << "]) Disconnecting.";
 
 					Kill(__FILE__, __LINE__);
 
 					/*
 					if (m_pClient && m_pClient->GetEvents() && m_pClient->GetEvents()->GetPlayer())
 					{
-						if (g_pWorld)
-							g_pWorld->BroadcastGlobal(ServerText(csprintf("%s has been detected using a possible speed hack and has been kicked.", m_pClient->GetEvents()->GetPlayer()->GetName().c_str()), 1), PRIVATE_MSG);
+					if (g_pWorld)
+					g_pWorld->BroadcastGlobal(ServerText(csprintf("%s has been detected using a possible speed hack and has been kicked.", m_pClient->GetEvents()->GetPlayer()->GetName().c_str()), 1), PRIVATE_MSG);
 					}
 					*/
 				}
@@ -777,13 +777,13 @@ void CPacketController::IncomingBlob(BlobPacket_s *blob, double recvTime)
 		Kill(__FILE__, __LINE__);
 		return;
 	}
-	
+
 	if (dwFlags & BT_REQUESTLOST)
 	{
 		ProcessBlob(blob);
 		return;
 	}
-	
+
 	if (!dwSequence)
 	{
 		ProcessBlob(blob);
@@ -891,7 +891,7 @@ void CPacketController::FlushFragments()
 			memcpy(blob->data, edible, wSize);
 		}
 
-		delete [] ((BYTE *)edible);
+		delete[]((BYTE *)edible);
 
 		m_out._fragQueue.Lock();
 		entry = m_out._fragQueue.begin();
@@ -929,7 +929,7 @@ void CPacketController::QueueNetMessage(void *data, DWORD length, WORD group, DW
 		messageData = new BYTE[messageLength];
 		memcpy(messageData, data, length);
 	}
-	
+
 	COutgoingNetMessage message;
 	message.data = messageData;
 	message.length = messageLength;

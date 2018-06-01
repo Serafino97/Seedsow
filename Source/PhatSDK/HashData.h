@@ -1,5 +1,6 @@
 
 #pragma once
+#include "easylogging++.h"
 
 template<typename _Kty> class HashBase;
 template<typename _Kty> class HashBaseData;
@@ -27,7 +28,7 @@ public:
 		id = 0;
 	}
 
-	const _Kty GetID()
+	_Kty GetID()
 	{
 		return id;
 	}
@@ -89,7 +90,7 @@ public:
 			m_iBucket++;
 			m_pLast = NULL;
 
-			if (m_iBucket>= m_pBase->GetBucketCount())
+			if (m_iBucket >= m_pBase->GetBucketCount())
 			{
 				// The end has been reached.
 				m_bEndReached = TRUE;
@@ -135,7 +136,7 @@ public:
 			m_iBucket++;
 			m_pLast = NULL;
 
-			if (m_iBucket>= m_pBase->GetBucketCount())
+			if (m_iBucket >= m_pBase->GetBucketCount())
 			{
 				// The end has been reached.
 				m_bEndReached = TRUE;
@@ -194,12 +195,12 @@ public:
 
 		// 64-bit = 16-bit shift
 		// 32-bit = 8-bit shift
-		hash_shift = sizeof(_Kty) <<1;
+		hash_shift = sizeof(_Kty) << 1;
 
 		// Calculate hash mask.
 		hash_mask = 0;
 
-		for (unsigned int bit = 1; (hash_mask | bit) <bucket_count; bit = bit <<1)
+		for (unsigned int bit = 1; (hash_mask | bit) <bucket_count; bit = bit << 1)
 			hash_mask |= bit;
 
 		// Init the table.
@@ -209,7 +210,7 @@ public:
 
 	HashBaseData<_Kty> *remove(_Kty Key)
 	{
-		size_t BucketIndex = (Key ^ (Key>> hash_shift)) & hash_mask;
+		size_t BucketIndex = (Key ^ (Key >> hash_shift)) & hash_mask;
 
 		HashBaseData<_Kty> *pBucket = hash_table[BucketIndex];
 
@@ -244,7 +245,7 @@ public:
 
 	void add(HashBaseData<_Kty> *pData)
 	{
-		size_t BucketIndex = (pData->id ^ (pData->id>> hash_shift)) & hash_mask;
+		size_t BucketIndex = (pData->id ^ (pData->id >> hash_shift)) & hash_mask;
 
 		pData->hash_next = hash_table[BucketIndex];
 		hash_table[BucketIndex] = pData;
@@ -252,7 +253,7 @@ public:
 
 	HashBaseData<_Kty> *lookup(_Kty Key)
 	{
-		HashBaseData<_Kty> *pBucket = hash_table[(Key ^ (Key>> hash_shift)) & hash_mask];
+		HashBaseData<_Kty> *pBucket = hash_table[(Key ^ (Key >> hash_shift)) & hash_mask];
 
 		while (pBucket)
 		{
@@ -267,7 +268,7 @@ public:
 
 	HashBaseData<_Kty> *clobber(HashBaseData<_Kty> *pData)
 	{
-		size_t BucketIndex = (pData->id ^ (pData->id>> hash_shift)) & hash_mask;
+		size_t BucketIndex = (pData->id ^ (pData->id >> hash_shift)) & hash_mask;
 
 		HashBaseData<_Kty> *pBucket, *pBaseBucket, *pLastBucket;
 		pBaseBucket = pBucket = hash_table[BucketIndex];
@@ -328,7 +329,7 @@ public:
 	// -- Pea you made this one up. It was probably inlined. --
 	size_t GetBucketIndex(_Kty Key)
 	{
-		return((Key ^ (Key>> hash_shift)) & hash_mask);
+		return((Key ^ (Key >> hash_shift)) & hash_mask);
 	}
 
 	// -- Pea you made this one up. It was probably inlined. --
@@ -404,10 +405,25 @@ public:
 
 	void destroy_contents()
 	{
-		_MybaseIter it(this);
+		try
+		{
+			_MybaseIter it(this);
+			try
+			{
+				while (!it.EndReached())
+					it.DeleteCurrent();
+			}
+			catch (...)
+			{
+				SERVER_ERROR << "Error progressing over iteration";
+			}
 
-		while (!it.EndReached())
-			it.DeleteCurrent();
+		}
+		catch (...)
+		{
+			SERVER_ERROR << "Failed to create iterator";
+		}
+
 	}
 };
 
@@ -473,7 +489,7 @@ public:
 			m_iBucket++;
 			m_pLast = NULL;
 
-			if (m_iBucket>= m_pBase->GetBucketCount())
+			if (m_iBucket >= m_pBase->GetBucketCount())
 			{
 				// The end has been reached.
 				m_bEndReached = TRUE;
@@ -519,7 +535,7 @@ public:
 			m_iBucket++;
 			m_pLast = NULL;
 
-			if (m_iBucket>= m_pBase->GetBucketCount())
+			if (m_iBucket >= m_pBase->GetBucketCount())
 			{
 				// The end has been reached.
 				m_bEndReached = TRUE;
@@ -547,7 +563,7 @@ public:
 
 private:
 
-	_MyHash *m_pBase; // 0x00
+	_MyHash * m_pBase; // 0x00
 	size_t m_iBucket; // 0x04
 	_MyData *m_pNodePtr; // 0x08
 	_MyData *m_pLast; // 0x0C
@@ -743,7 +759,7 @@ public:
 
 private:
 
-	_MyHash *m_pBase; // 0x00
+	_MyHash * m_pBase; // 0x00
 	size_t m_iBucket; // 0x04
 	_MyData *m_pNodePtr; // 0x08
 	BOOL m_bEndReached; // 0x0C
@@ -788,10 +804,17 @@ public:
 		{
 			_Mty *pNodeData = it.GetCurrentData();
 
-			it.Next();
+			try
+			{
+				it.Next();
 
-			if (pNodeData)
-				delete pNodeData;
+				if (pNodeData)
+					delete pNodeData;
+			}
+			catch (...)
+			{
+				SERVER_ERROR << "Error in HashData DeleteAll";
+			}
 		}
 
 		flush();
@@ -817,7 +840,7 @@ public:
 
 	_Mty *remove(_Kty Key)
 	{
-		size_t BucketIndex = (Key ^ (Key>> 16)) % bucket_count;
+		size_t BucketIndex = (Key ^ (Key >> 16)) % bucket_count;
 		_MyData **BucketOffset = &hash_table[BucketIndex];
 
 		_MyData *RootEntry = BucketOffset[0];
@@ -874,7 +897,7 @@ public:
 
 	BOOL add(_Mty *pData, _Kty Key)
 	{
-		size_t BucketIndex = (Key ^ (Key>> 16)) % bucket_count;
+		size_t BucketIndex = (Key ^ (Key >> 16)) % bucket_count;
 		_MyData **BucketOffset = &hash_table[BucketIndex];
 
 		_MyData *pHashData = new _MyData;
@@ -892,7 +915,7 @@ public:
 
 	_Mty *lookup(_Kty Key)
 	{
-		_MyData *pEntry = hash_table[(Key ^ (Key>> 16)) % bucket_count];
+		_MyData *pEntry = hash_table[(Key ^ (Key >> 16)) % bucket_count];
 
 		while (pEntry)
 		{
@@ -914,7 +937,7 @@ public:
 	// -- Pea you made this one up. It was probably inlined. --
 	size_t GetBucketIndex(_Kty Key)
 	{
-		return((Key ^ (Key>> 16)) % bucket_count);
+		return((Key ^ (Key >> 16)) % bucket_count);
 	}
 
 	// -- Pea you made this one up. It was probably inlined. --
@@ -936,7 +959,7 @@ public:
 	}
 
 private:
-	_MyData **hash_table; // 0x00
+	_MyData * *hash_table; // 0x00
 	size_t bucket_count; // 0x04
 };
 
@@ -946,39 +969,30 @@ template<typename _Kty, class _Dty>
 class PackableHashTable
 {
 public:
-	PackableHashTable()
-	{
-		// ...
-	}
+PackableHashTable()
+{
+// ...
+}
 
-	virtual ~PackableHashTable()
-	{
-		Destroy();
-	}
+virtual ~PackableHashTable()
+{
+Destroy();
+}
 
-	void Destroy()
-	{
-		// ...
-	}
+void Destroy()
+{
+// ...
+}
 
-	void EmptyContents()
-	{
-		// ...
-	}
+void EmptyContents()
+{
+// ...
+}
 
-	virtual BOOL UnPack(BYTE **ppData, ULONG iSize)
-	{
-		// ...
-		return TRUE;
-	}
+virtual BOOL UnPack(BYTE **ppData, ULONG iSize)
+{
+// ...
+return TRUE;
+}
 };
 */
-
-
-
-
-
-
-
-
-

@@ -30,6 +30,7 @@ public:
 	void BeginLogout();
 	void OnLogoutCompleted();
 	void ExitWorld();
+	void ForceLogout();
 
 	void ActionComplete(int error = WERROR_NONE);
 	void SendText(const char *szText, long lColor);

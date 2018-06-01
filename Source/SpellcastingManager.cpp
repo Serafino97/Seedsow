@@ -13,9 +13,7 @@
 #include "Config.h"
 #include "CombatFormulas.h"
 #include "RandomRange.h"
-#include "Random.h"
-#include <random>
-
+#include "fastrand.h"
 
 const float MAX_HEADING_TO_TARGET_FOR_CAST = 45.0f;
 const float MAX_TURN_TIME_FOR_CAST = 8.0f;
@@ -77,9 +75,14 @@ bool CSpellcastingManager::ResolveSpellBeingCasted()
 	// item enchantment
 	if (m_SpellCastData.equipped && (m_SpellCastData.spell->_school == 3) && (m_SpellCastData.spell->_bitfield & SelfTargeted_SpellIndex))
 	{
-		m_SpellCastData.target_id = m_SpellCastData.caster_id;
+		if (m_SpellCastData.spell->_category == 152 || m_SpellCastData.spell->_category == 154 || m_SpellCastData.spell->_category == 156 || m_SpellCastData.spell->_category == 158 || m_SpellCastData.spell->_category == 195 || m_SpellCastData.spell->_category == 695)
+		{
+			m_SpellCastData.target_id = m_SpellCastData.source_id;
+		}
+		else {
+			m_SpellCastData.target_id = m_SpellCastData.caster_id;
+		}
 	}
-
 	return true;
 }
 
@@ -94,33 +97,33 @@ std::string appendSpellText(std::string text, std::string newText, SpellComponen
 	case SpellComponentType::Undef_SpellComponentType:
 	case SpellComponentType::Action_SpellComponentType:
 	case SpellComponentType::ConceptPrefix_SpellComponentType:
+	{
+		if (!text.empty())
+			text += " ";
+		text += newText;
+		break;
+	}
+	case SpellComponentType::ConceptSuffix_SpellComponentType:
+	{
+		switch (lastComponentType)
 		{
+		default:
+		case SpellComponentType::Undef_SpellComponentType:
+		case SpellComponentType::Action_SpellComponentType:
 			if (!text.empty())
 				text += " ";
 			text += newText;
 			break;
-		}
-	case SpellComponentType::ConceptSuffix_SpellComponentType:
-		{
-			switch (lastComponentType)
-			{
-			default:
-			case SpellComponentType::Undef_SpellComponentType:
-			case SpellComponentType::Action_SpellComponentType:
-				if (!text.empty())
-					text += " ";
-				text += newText;
-				break;
 
-			case SpellComponentType::ConceptPrefix_SpellComponentType:
-			case SpellComponentType::ConceptSuffix_SpellComponentType:
-				newText[0] = ::tolower(newText[0]);
-				text += newText;
-				break;
-			}
-
+		case SpellComponentType::ConceptPrefix_SpellComponentType:
+		case SpellComponentType::ConceptSuffix_SpellComponentType:
+			newText[0] = ::tolower(newText[0]);
+			text += newText;
 			break;
 		}
+
+		break;
+	}
 	}
 
 	return text;
@@ -131,7 +134,7 @@ bool CSpellcastingManager::AddMotionsForSpell()
 	SpellComponentTable *pSpellComponents = MagicSystem::GetSpellComponentTable();
 	if (!pSpellComponents)
 		return false;
-	
+
 	std::string spellWords;
 	SpellComponentType lastComponentType = Undef_SpellComponentType;
 
@@ -156,7 +159,7 @@ bool CSpellcastingManager::AddMotionsForSpell()
 			if (gesture == 0x1000012F)
 				gesture = 0x13000132; // level 7's are wrong for some reason
 
-			// m_pWeenie->SendText(csprintf("Component \"%s\": %s %f %f 0x%08X (%u)", pSpellComponent->_name.c_str(), pSpellComponent->_text.c_str(), pSpellComponent->_time, pSpellComponent->_CDM, pSpellComponent->_gesture, pSpellComponent->_gesture & 0xFFFF), 1);
+									  // m_pWeenie->SendText(csprintf("Component \"%s\": %s %f %f 0x%08X (%u)", pSpellComponent->_name.c_str(), pSpellComponent->_text.c_str(), pSpellComponent->_time, pSpellComponent->_CDM, pSpellComponent->_gesture, pSpellComponent->_gesture & 0xFFFF), 1);
 			m_PendingMotions.push_back(SpellCastingMotion(gesture, 2.0f, firstMotion, firstMotion, pSpellComponent->_time));
 			firstMotion = false;
 		}
@@ -223,7 +226,7 @@ float CSpellcastingManager::HeadingToTarget()
 		return 0.0;
 	}
 
-	if (pTarget->parent) 
+	if (pTarget->parent)
 	{
 		// Target has a parent (in inventory?)
 		// This needs additional logic
@@ -341,7 +344,7 @@ void CSpellcastingManager::BeginNextMotion()
 	}
 }
 
-Position CSpellcastingManager::GetSpellProjectileSpawnPosition(CSpellProjectile *pProjectile, CWeenieObject *pTarget, float *pDistToTarget)
+Position CSpellcastingManager::GetSpellProjectileSpawnPosition(CSpellProjectile *pProjectile, CWeenieObject *pTarget, float *pDistToTarget, double dDir, bool bRing)
 {
 	bool bArc = pProjectile->InqBoolQuality(GRAVITY_STATUS_BOOL, FALSE) ? true : false;
 
@@ -352,12 +355,29 @@ Position CSpellcastingManager::GetSpellProjectileSpawnPosition(CSpellProjectile 
 
 	if (pTarget == pSource)
 	{
-		targetOffset = spawnPosition.get_offset(pTarget->m_Position.add_offset(pTarget->m_Position.localtoglobalvec(Vector(0, 2000, pSource->GetHeight() * (2.0 / 3.0)))));
+		// rotate by dDir
+		double cs = cos(dDir);
+		double sn = sin(dDir);
+
+		double x = -1000 * sn;
+		double y = 1000 * cs;
+
+		float z = pSource->GetHeight() * (2.0 / 3.0);
+		if (bRing)
+			z *= 1.5;
+
+		targetOffset = spawnPosition.get_offset(pTarget->m_Position.add_offset(pTarget->m_Position.localtoglobalvec(Vector(x, y, z))));
 	}
 	else
 	{
 		targetOffset = spawnPosition.get_offset(pTarget->m_Position.add_offset(Vector(0, 0, pTarget->GetHeight() * (bArc ? (5.0 / 6.0) : (2.0 / 3.0)))));
 		//targetOffset = spawnPosition.get_offset(pTarget->m_Position.add_offset(Vector(0, 0, pTarget->GetHeight() * (bArc ? (5.0 / 6.0) : (0.5)))));
+		// rotate by dDir
+		double cs = cos(dDir);
+		double sn = sin(dDir);
+
+		targetOffset.x = targetOffset.x * cs - targetOffset.y * sn;
+		targetOffset.y = targetOffset.x * sn + targetOffset.y * cs;
 	}
 
 	Vector targetDir = targetOffset;
@@ -373,7 +393,10 @@ Position CSpellcastingManager::GetSpellProjectileSpawnPosition(CSpellProjectile 
 	}
 	else
 	{
-		float minSpawnDist = (pSource->GetRadius() + pProjectile->GetRadius()) + 0.1f;
+		double minSpawnDist = (pSource->GetRadius() + pProjectile->GetRadius()) + 0.1f;
+
+		if (bRing)
+			minSpawnDist += 1.0f;
 
 		spawnPosition.frame.m_origin += targetDir * minSpawnDist;
 		spawnPosition.frame.set_vector_heading(targetDir);
@@ -384,7 +407,7 @@ Position CSpellcastingManager::GetSpellProjectileSpawnPosition(CSpellProjectile 
 	return spawnPosition;
 }
 
-Vector CSpellcastingManager::GetSpellProjectileSpawnVelocity(Position *pSpawnPosition, CWeenieObject *pTarget, float speed, bool tracked, bool gravity, Vector *pTargetDir)
+Vector CSpellcastingManager::GetSpellProjectileSpawnVelocity(Position *pSpawnPosition, CWeenieObject *pTarget, float speed, bool tracked, bool gravity, Vector *pTargetDir, double dDir, bool bRing)
 {
 	Vector targetOffset;
 	double targetDist;
@@ -392,156 +415,101 @@ Vector CSpellcastingManager::GetSpellProjectileSpawnVelocity(Position *pSpawnPos
 	CWeenieObject *pSource = GetCastSource();
 	if (pTarget == pSource)
 	{
-		targetOffset = pSpawnPosition->get_offset(pTarget->m_Position.add_offset(pTarget->m_Position.localtoglobalvec(Vector(0, 2000, pTarget->GetHeight() * (2.0 / 3.0)))));
+		// rotate by dDir
+		double cs = cos(dDir);
+		double sn = sin(dDir);
+
+		double x = -1000 * sn;
+		double y = 1000 * cs;
+
+		float z = pTarget->GetHeight() * (2.0 / 3.0);
+		if (bRing)
+			z *= 1.5;
+
+		targetOffset = pSpawnPosition->get_offset(pTarget->m_Position.add_offset(pTarget->m_Position.localtoglobalvec(Vector(x, y, z))));
 		tracked = false;
 	}
 	else
+	{
 		targetOffset = pSpawnPosition->get_offset(pTarget->m_Position.add_offset(Vector(0, 0, pTarget->GetHeight() * (2.0 / 3.0))));
-		//targetOffset = pSpawnPosition->get_offset(pTarget->m_Position.add_offset(Vector(0, 0, pTarget->GetHeight() * 0.5f)));
+
+		// rotate by dDir
+		double cs = cos(dDir);
+		double sn = sin(dDir);
+
+		targetOffset.x = targetOffset.x * cs - targetOffset.y * sn;
+		targetOffset.y = targetOffset.x * sn + targetOffset.y * cs;
+	}
+	//targetOffset = pSpawnPosition->get_offset(pTarget->m_Position.add_offset(Vector(0, 0, pTarget->GetHeight() * 0.5f)));
 
 	targetDist = targetOffset.magnitude();
+
+	Vector v;
 
 	if (!tracked)
 	{
 		double t = targetDist / speed;
-		Vector v = targetOffset / t;
+		v = targetOffset / t;
 
 		if (gravity)
 			v.z += (9.8*t) / 2.0f;
-		
+
 		Vector targetDir = v;
 		targetDir.normalize();
 
 		if (pTargetDir)
 			*pTargetDir = targetDir;
-
-		return v;
 	}
-
-	Vector P0 = targetOffset;
-	Vector P1(0, 0, 0);
-
-	float s0 = pTarget->get_velocity().magnitude();
-	Vector V0 = pTarget->get_velocity();
-	if (V0.normalize_check_small())
-		V0 = Vector(0, 0, 0);
-
-	float s1 = speed;
-
-	double a = (V0.x * V0.x) + (V0.y * V0.y) - (s1 * s1);
-	double b = 2 * ((P0.x * V0.x) + (P0.y * V0.y) - (P1.x * V0.x) - (P1.y * V0.y));
-	double c = (P0.x * P0.x) + (P0.y * P0.y) + (P1.x * P1.x) + (P1.y * P1.y) - (2 * P1.x * P0.x) - (2 * P1.y * P0.y);
-
-	double t1 = (-b + sqrt((b * b) - (4 * a * c))) / (2 * a);
-	double t2 = (-b - sqrt((b * b) - (4 * a * c))) / (2 * a);
-
-	if (t1 < 0)
-		t1 = FLT_MAX;
-	if (t2 < 0)
-		t2 = FLT_MAX;
-
-	double t = min(t1, t2);
-	if (t >= 100.0)
+	else
 	{
-		return GetSpellProjectileSpawnVelocity(pSpawnPosition, pTarget, speed, false, gravity, pTargetDir);
-	}
+		Vector P0 = targetOffset;
+		Vector P1(0, 0, 0);
 
-	Vector v;
-	v.x = (P0.x + (t * s0 * V0.x)) / (t); // * s1);
-	v.y = (P0.y + (t * s0 * V0.y)) / (t); // * s1);
-	v.z = (P0.z + (t * s0 * V0.z)) / (t); // * s1);
+		float s0 = pTarget->get_velocity().magnitude();
+		Vector V0 = pTarget->get_velocity();
+		if (V0.normalize_check_small())
+			V0 = Vector(0, 0, 0);
 
-	if (gravity)
-	{
-		v.z += (9.8*t) / 2.0f;
-	}
+		float s1 = speed;
 
-	if (pTargetDir)
-	{
-		Vector targetDir = v;
-		if (targetDir.normalize_check_small())
-			targetDir = Vector(0, 0, 0);
+		double a = (V0.x * V0.x) + (V0.y * V0.y) - (s1 * s1);
+		double b = 2 * ((P0.x * V0.x) + (P0.y * V0.y) - (P1.x * V0.x) - (P1.y * V0.y));
+		double c = (P0.x * P0.x) + (P0.y * P0.y) + (P1.x * P1.x) + (P1.y * P1.y) - (2 * P1.x * P0.x) - (2 * P1.y * P0.y);
 
-		*pTargetDir = targetDir;
+		double t1 = (-b + sqrt((b * b) - (4 * a * c))) / (2 * a);
+		double t2 = (-b - sqrt((b * b) - (4 * a * c))) / (2 * a);
+
+		if (t1 < 0)
+			t1 = FLT_MAX;
+		if (t2 < 0)
+			t2 = FLT_MAX;
+
+		double t = min(t1, t2);
+		if (t >= 100.0)
+		{
+			return GetSpellProjectileSpawnVelocity(pSpawnPosition, pTarget, speed, false, gravity, pTargetDir, dDir, bRing);
+		}
+
+		v.x = (P0.x + (t * s0 * V0.x)) / (t); // * s1);
+		v.y = (P0.y + (t * s0 * V0.y)) / (t); // * s1);
+		v.z = (P0.z + (t * s0 * V0.z)) / (t); // * s1);
+
+		if (gravity)
+		{
+			v.z += (9.8*t) / 2.0f;
+		}
+
+		if (pTargetDir)
+		{
+			Vector targetDir = v;
+			if (targetDir.normalize_check_small())
+				targetDir = Vector(0, 0, 0);
+
+			*pTargetDir = targetDir;
+		}
 	}
 
 	return v;
-}
-
-const double MIN_BOLT_VELOCITY = 5.0;
-const double MAX_BOLT_VELOCITY = 20.0;
-double CalculateBoltVelocityByDistance(double distance)
-{
-	return MIN_BOLT_VELOCITY + ((MAX_BOLT_VELOCITY-MIN_BOLT_VELOCITY) * min(1.0, max(0.0, (distance / 15.0))));
-}
-
-int CSpellcastingManager::LaunchRingProjectiles(DWORD wcid)
-{
-	//DWORD damage = 0;
-
-	//switch (m_SpellCastData.power_level_of_power_component)
-	//{
-	//case 1: damage = Random::GenUInt(16, 31); break;
-	//case 2: damage = Random::GenUInt(18, 35); break;
-	//case 3: damage = Random::GenUInt(21, 42); break;
-	//case 4: damage = Random::GenUInt(25, 50); break;
-	//case 5: damage = Random::GenUInt(29, 59); break;
-	//case 6: damage = Random::GenUInt(36, 71); break;
-	//case 7:
-	//case 8: damage = Random::GenUInt(42, 84); break;
-	//case 9:
-	//case 10: damage = Random::GenUInt(47, 94); break;
-	//}
-
-	float velocity = 1.0f;
-	bool tracking = true;
-	bool gravity = false;
-
-	const int NUM_RING_PROJECTILES = 4;
-
-	for (int i = 0; i < NUM_RING_PROJECTILES; i++)
-	{
-		CSpellProjectile *pProjectile = new CSpellProjectile(m_SpellCastData, m_SpellCastData.target_id);//, damage);
-
-		// spawn default object properties
-		g_pWeenieFactory->ApplyWeenieDefaults(pProjectile, wcid);
-
-		// set spell id (is this even needed?)
-		pProjectile->SetSpellID(m_SpellCastData.spell_id);
-
-		double rads = ((i * 2) / (double)NUM_RING_PROJECTILES) * PI;
-		Vector dir(sin(rads), cos(rads), 0.0f);
-
-		float velocity = 2.0f;
-
-		// create the initial object
-		Position projSpawnPos = GetCastSource()->m_Position;
-		projSpawnPos.frame.set_heading(rads);
-
-		pProjectile->SetInitialPosition(projSpawnPos);		
-		pProjectile->InitPhysicsObj();
-
-		pProjectile->m_Position = pProjectile->m_Position.add_offset(Vector(
-			(GetCastSource()->GetRadius() + pProjectile->GetRadius() + F_EPSILON) * dir.x,
-			(GetCastSource()->GetRadius() + pProjectile->GetRadius() + F_EPSILON) * dir.y, /*1.223465f*/0.8f));
-
-		/*
-		m_pWeenie->SendText(
-			csprintf("DEBUG: WeenieHeight/Radius: %f %f ProjHeight/Radius: %f %f",
-				m_pWeenie->GetHeight(), m_pWeenie->GetRadius(), pProjectile->GetHeight(), pProjectile->GetRadius()), LTT_ALL_CHANNELS);
-				*/
-
-		// set velocity
-		pProjectile->set_velocity(dir * velocity, 0);
-
-		// insert the object into the world
-		g_pWorld->CreateEntity(pProjectile);
-
-		// launch particle effect
-		pProjectile->EmitEffect(PS_Launch, 0.4f);
-	}
-
-	return WERROR_NONE;
 }
 
 bool CSpellcastingManager::LaunchProjectileSpell(ProjectileSpellEx *meta)
@@ -562,6 +530,49 @@ bool CSpellcastingManager::LaunchProjectileSpell(ProjectileSpellEx *meta)
 
 	CWeenieObject *pSource = GetCastSource();
 
+	if (!pSource)
+	{
+		return false;
+	}
+
+	bool isLifeProjectile = false;
+	double selfDrainedAmount = 0;
+	float selfDrainedDamageRatio = 0;
+	if (meta->AsLifeProjectileSpell())
+	{
+		isLifeProjectile = true;
+		ProjectileLifeSpellEx *lifeProjectile = meta->AsLifeProjectileSpell();
+
+		DAMAGE_TYPE damageType = static_cast<DAMAGE_TYPE>(lifeProjectile->_etype);
+		selfDrainedDamageRatio = lifeProjectile->_damage_ratio;
+		float drainPercentage = lifeProjectile->_drain_percentage;
+
+		switch (damageType)
+		{
+		case HEALTH_DAMAGE_TYPE:
+		{
+			int amount = round((float)pSource->GetHealth() * drainPercentage);
+			selfDrainedAmount = abs(pSource->AdjustHealth(-amount));
+			break;
+		}
+		case STAMINA_DAMAGE_TYPE:
+		{
+			int amount = round((float)pSource->GetStamina() * drainPercentage);
+			selfDrainedAmount = abs(pSource->AdjustStamina(-amount));
+			break;
+		}
+		case MANA_DAMAGE_TYPE:
+		{
+			int amount = round((float)pSource->GetMana() * drainPercentage);
+			selfDrainedAmount = abs(pSource->AdjustMana(-amount));
+			break;
+		}
+		}
+		pSource->CheckDeath(pSource, damageType);
+	}
+
+	bool bAngled = meta->_spreadAngle > 0 && numX > 1;
+
 	for (int x = 0; x < numX; x++)
 	{
 		for (int y = 0; y < numY; y++)
@@ -570,15 +581,22 @@ bool CSpellcastingManager::LaunchProjectileSpell(ProjectileSpellEx *meta)
 			{
 				//DWORD damage = Random::GenUInt(meta->_baseIntensity, meta->_baseIntensity + meta->_variance);
 
-				CSpellProjectile *pProjectile = new CSpellProjectile( // revise me
-					m_SpellCastData, pTarget == pSource ? 0 : m_SpellCastData.target_id);//, damage);
+				int target = m_SpellCastData.target_id;
+
+				if (numX > 1 || numY > 1 || numZ > 1)
+				{
+					// volleys, blasts, rings aren't limited to one target
+					target = 0;
+				}
+
+				CSpellProjectile *pProjectile = new CSpellProjectile(m_SpellCastData, target);
 
 				// create the initial object
 				float distToTarget;
-				
+
 				// spawn default object properties
 				g_pWeenieFactory->ApplyWeenieDefaults(pProjectile, meta->_wcid);
-				
+
 				pProjectile->m_Qualities.SetInt(DAMAGE_TYPE_INT, meta->_etype);
 
 				// set spell id (is this even needed?)
@@ -586,84 +604,93 @@ bool CSpellcastingManager::LaunchProjectileSpell(ProjectileSpellEx *meta)
 				pProjectile->SetInitialPosition(GetCastSource()->m_Position);
 				pProjectile->InitPhysicsObj();
 
-				pProjectile->m_PhysicsState |= MISSILE_PS|REPORT_COLLISIONS_PS;
+				pProjectile->m_PhysicsState |= MISSILE_PS | REPORT_COLLISIONS_PS;
 				pProjectile->m_PhysicsState &= ~IGNORE_COLLISIONS_PS;
-				
-				Position projSpawnPos = GetSpellProjectileSpawnPosition(pProjectile, pTarget, &distToTarget);
-
-				Vector createOffset = projSpawnPos.localtoglobalvec(meta->_createOffset);
-
-				projSpawnPos = projSpawnPos.add_offset(
-					Vector(
-						Random::GenFloat(-1.0, 1.0) * meta->_peturbation.x * meta->_padding.x,
-						Random::GenFloat(-1.0, 1.0) * meta->_peturbation.y * meta->_padding.y,
-						Random::GenFloat(-1.0, 1.0) * meta->_peturbation.z * meta->_padding.z));
-
-				projSpawnPos = projSpawnPos.add_offset(createOffset);
-
-				Position spawnSourcePosition = projSpawnPos;
-
-				float radius = pProjectile->GetRadius();
-
-				Vector sizePerProjectile = meta->_padding; // * radius;
-				
-				Vector projectileGroupOffset(x, y, z);
-				projectileGroupOffset.x *= sizePerProjectile.x;
-				projectileGroupOffset.y *= sizePerProjectile.y;
-				projectileGroupOffset.z *= sizePerProjectile.z;
-
-				projectileGroupOffset.x -= sizePerProjectile.x * ((meta->_dims.x - 1.0) / 2.0);
-				projectileGroupOffset.y -= sizePerProjectile.y * ((meta->_dims.y - 1.0) / 2.0);
-				projectileGroupOffset.z -= sizePerProjectile.z * ((meta->_dims.z - 1.0) / 2.0);
-
-				projectileGroupOffset = projSpawnPos.localtoglobalvec(projectileGroupOffset);
-				projSpawnPos = projSpawnPos.add_offset(projectileGroupOffset);
-
-				// set spell id (is this even needed?)
-				pProjectile->m_Position = projSpawnPos;
 
 				double maxVelocity = 5.0;
-
 				pProjectile->m_Qualities.InqFloat(MAXIMUM_VELOCITY_FLOAT, maxVelocity);
 
 				bool bGravity = false;
-				bool bTracking = !meta->_bNonTracking;
-
 				if (pProjectile->InqBoolQuality(GRAVITY_STATUS_BOOL, FALSE))
 				{
 					pProjectile->m_PhysicsState |= GRAVITY_PS;
 					bGravity = true;
 				}
 
-				if (pProjectile->InqBoolQuality(INELASTIC_BOOL, FALSE))
-					pProjectile->m_PhysicsState |= INELASTIC_PS;
-				if (pProjectile->InqBoolQuality(SCRIPTED_COLLISION_BOOL, FALSE))
-					pProjectile->m_PhysicsState |= SCRIPTED_COLLISION_PS;
-				if (pProjectile->InqBoolQuality(LIGHTS_STATUS_BOOL, FALSE))
-					pProjectile->m_PhysicsState |= LIGHTING_ON_PS;
+				bool bTracking = !meta->_bNonTracking;
 
-				// pProjectile->m_PhysicsState |= ETHEREAL_PS;
-
-				// set velocity
-				Vector spawnVelocity = GetSpellProjectileSpawnVelocity(&spawnSourcePosition, pTarget, maxVelocity, bTracking, bGravity, NULL);
-
-				if (meta->_spreadAngle > 0)
+				// angle at which to spawn from the caster
+				double theta = 0;
+				bool bRing = false;
+				if (bAngled)
 				{
-					if (numX > 1)
-					{
-						double xRatio = x / (double)(numX - 1);
-						double theta = DEG2RAD((xRatio - 0.5) * meta->_spreadAngle);
-						double cs = cos(theta);
-						double sn = sin(theta);
-						double px = spawnVelocity.x * cs - spawnVelocity.y * sn;
-						double py = spawnVelocity.x * sn + spawnVelocity.y * cs;
+					double xRatio = x / (double)numX;
+					xRatio -= (numX - 1.0) / (double)(2 * numX);
 
-						spawnVelocity.x = px;
-						spawnVelocity.y = py;
+					theta = DEG2RAD(xRatio * meta->_spreadAngle);
+
+					// if a ring we want it to start a little further out
+					if (meta->_spreadAngle > 180)
+					{
+						bRing = true;
 					}
 				}
 
+				Position projSpawnPos = GetSpellProjectileSpawnPosition(pProjectile, pTarget, &distToTarget, theta, bRing);
+
+
+				if (bRing)
+				{
+					// adjust for player casting position
+					Vector ringOffset = pSource->m_Position.localtoglobalvec(Vector(0, 0.1f, 0));
+					projSpawnPos = projSpawnPos.add_offset(ringOffset);
+				}
+
+				// overall offset
+				Vector createOffset = projSpawnPos.localtoglobalvec(meta->_createOffset);
+				projSpawnPos = projSpawnPos.add_offset(
+					Vector(
+						FastRNG.NextDouble(-1.0, 1.0) * meta->_peturbation.x * meta->_padding.x,
+						FastRNG.NextDouble(-1.0, 1.0) * meta->_peturbation.y * meta->_padding.y,
+						FastRNG.NextDouble(-1.0, 1.0) * meta->_peturbation.z * meta->_padding.z));
+				projSpawnPos = projSpawnPos.add_offset(createOffset);
+
+				Vector spawnVelocity = GetSpellProjectileSpawnVelocity(&projSpawnPos, pTarget, maxVelocity, bTracking, bGravity, NULL, theta, bRing);
+
+				// individual offset
+				if (!bAngled)
+				{
+					Vector sizePerProjectile = meta->_padding; // * radius;
+
+					Vector projectileGroupOffset = Vector(x, y, z);
+					projectileGroupOffset.x *= sizePerProjectile.x;
+					projectileGroupOffset.y *= sizePerProjectile.y;
+					projectileGroupOffset.z *= sizePerProjectile.z;
+
+					projectileGroupOffset.x -= sizePerProjectile.x * ((meta->_dims.x - 1.0) / 2.0);
+					projectileGroupOffset.y -= sizePerProjectile.y * ((meta->_dims.y - 1.0) / 2.0);
+					projectileGroupOffset.z -= sizePerProjectile.z * ((meta->_dims.z - 1.0) / 2.0);
+
+					projectileGroupOffset = projSpawnPos.localtoglobalvec(projectileGroupOffset);
+					projSpawnPos = projSpawnPos.add_offset(projectileGroupOffset);
+				}
+
+
+				pProjectile->m_Position = projSpawnPos;
+
 				pProjectile->set_velocity(spawnVelocity, 0);
+
+				pProjectile->m_PhysicsState |= INELASTIC_PS | SCRIPTED_COLLISION_PS | LIGHTING_ON_PS;
+
+				// pProjectile->m_PhysicsState |= ETHEREAL_PS;
+
+
+
+
+				if (isLifeProjectile)
+				{
+					pProjectile->makeLifeProjectile(selfDrainedAmount, selfDrainedDamageRatio);
+				}
 
 				// insert the object into the world
 				if (g_pWorld->CreateEntity(pProjectile))
@@ -673,15 +700,14 @@ bool CSpellcastingManager::LaunchProjectileSpell(ProjectileSpellEx *meta)
 
 					/*
 					LOG(Temp, Normal, "Projectile Offset @ %.3f %.3f %.3f %f\n",
-						createOffset.x + projectileGroupOffset.x,
-						createOffset.y + projectileGroupOffset.y,
-						createOffset.z + projectileGroupOffset.z, pProjectile->m_velocityVector.magnitude());
-						*/
+					createOffset.x + projectileGroupOffset.x,
+					createOffset.y + projectileGroupOffset.y,
+					createOffset.z + projectileGroupOffset.z, pProjectile->m_velocityVector.magnitude());
+					*/
 				}
 			}
 		}
 	}
-
 	// LOG(Temp, Normal, "-\n");
 
 	return true;
@@ -697,12 +723,37 @@ void CSpellcastingManager::PerformCastParticleEffects()
 	{
 		GetCastSource()->EmitEffect(m_SpellCastData.spell->_caster_effect, max(0.0, min(1.0, (m_SpellCastData.power_level_of_power_component - 1.0) / 7.0)));
 	}
-	
+
 	// target effect
 	if (m_SpellCastData.spell->_target_effect)
 	{
 		if (CWeenieObject *pTarget = GetCastTarget())
 			pTarget->EmitEffect(m_SpellCastData.spell->_target_effect, max(0.0, min(1.0, (m_SpellCastData.power_level_of_power_component - 1.0) / 7.0)));
+	}
+}
+
+void CSpellcastingManager::PerformFellowCastParticleEffects(Fellowship *fellow)
+{
+	if (!m_bCasting)
+		return;
+
+	// self effect
+	if (m_SpellCastData.spell->_caster_effect)
+	{
+		GetCastSource()->EmitEffect(m_SpellCastData.spell->_caster_effect, max(0.0, min(1.0, (m_SpellCastData.power_level_of_power_component - 1.0) / 7.0)));
+	}
+
+	// target effect
+	if (m_SpellCastData.spell->_target_effect)
+	{
+		for (auto &entry : fellow->_fellowship_table)
+		{
+			if (CWeenieObject *member = g_pWorld->FindPlayer(entry.first))
+			{
+				if (member)
+					member->EmitEffect(m_SpellCastData.spell->_target_effect, max(0.0, min(1.0, (m_SpellCastData.power_level_of_power_component - 1.0) / 7.0)));
+			}
+		}
 	}
 }
 
@@ -723,19 +774,20 @@ void CSpellcastingManager::BeginPortalSend(const Position &targetPos)
 
 int CSpellcastingManager::LaunchSpellEffect()
 {
-	if (int targetError = CheckTargetValidity() && m_SpellCastData.range_check)
+	int targetError = CheckTargetValidity();
+	if (targetError && m_SpellCastData.range_check)
 	{
 		switch (targetError)
 		{
-		case WERROR_MAGIC_TARGET_OUT_OF_RANGE:
-			{
-				CWeenieObject *pTarget = GetCastTarget();
-				if (pTarget)
-					pTarget->SendText(csprintf("%s tried to cast a spell on you, but was too far away!", m_pWeenie->GetName().c_str()), LTT_MAGIC);
+		case WERROR_MISSILE_OUT_OF_RANGE:
+		{
+			CWeenieObject *pTarget = GetCastTarget();
+			if (pTarget)
+				pTarget->SendText(csprintf("%s tried to cast a spell on you, but was too far away!", m_pWeenie->GetName().c_str()), LTT_MAGIC);
 
-				m_pWeenie->SendText("That target is too far away!", LTT_MAGIC);
-				break;
-			}
+			m_pWeenie->SendText("That target is too far away!", LTT_MAGIC);
+			break;
+		}
 		}
 
 		return targetError;
@@ -747,7 +799,7 @@ int CSpellcastingManager::LaunchSpellEffect()
 	{
 		bool fizzled = false;
 		double chance = GetMagicSkillChance(m_SpellCastData.current_skill, m_SpellCastData.spell->_power);
-		if (chance < Random::RollDice(0.0, 1.0))
+		if (chance < FastRNG.NextDouble())
 		{
 			// fizzle
 			m_pWeenie->EmitEffect(PS_Fizzle, 0.542734265f);
@@ -769,7 +821,7 @@ int CSpellcastingManager::LaunchSpellEffect()
 		{
 			//Each spell and each component type has a burn rate, where the lower level spells typically burn less.
 			//This rate is increased when fizzling. Your magic skill is not a factor except indirectly through fizzling.
-				
+
 			SpellComponentTable *pSpellComponents = MagicSystem::GetSpellComponentTable();
 			float spellComponentLossMod = m_SpellCastData.spell->_component_loss;
 			if (fizzled)
@@ -781,7 +833,7 @@ int CSpellcastingManager::LaunchSpellEffect()
 				for (std::map<DWORD, DWORD>::iterator iter = m_UsedComponents.begin(); iter != m_UsedComponents.end(); ++iter)
 				{
 					CWeenieObject *component = g_pWorld->FindObject(iter->first);
-					if(!component) // where did it go? force fizzle.
+					if (!component) // where did it go? force fizzle.
 						return WERROR_MAGIC_FIZZLE;
 
 					int compId = component->InqDIDQuality(SPELL_COMPONENT_DID, 0);
@@ -791,10 +843,9 @@ int CSpellcastingManager::LaunchSpellEffect()
 					const SpellComponentBase *componentBase = pSpellComponents->InqSpellComponentBase(compId);
 					float burnChance = componentBase->_CDM * spellComponentLossMod;
 					burnChance *= min(1.0, (double)spellPower / (double)currentSkill);
-					for (int i = 0; i < getRandomNumber(1, iter->second, eRandomFormula::favorMid, 1.5, 0); ++i)
+					if (FastRNG.NextDouble() < burnChance)
 					{
-
-						if (Random::RollDice(0.0, 1.0) < burnChance)
+						for (int i = 0; i < getRandomNumber(1, iter->second, eRandomFormula::favorMid, 1.5, 0); ++i)
 						{
 							component->DecrementStackOrStructureNum();
 							if (componentsConsumedString.length() > 0)
@@ -810,7 +861,7 @@ int CSpellcastingManager::LaunchSpellEffect()
 			}
 		}
 
-		if(fizzled)
+		if (fizzled)
 			return WERROR_MAGIC_FIZZLE;
 
 		m_pWeenie->AdjustMana(-GenerateManaCost());
@@ -823,780 +874,1344 @@ int CSpellcastingManager::LaunchSpellEffect()
 		switch (m_SpellCastData.spellEx->_meta_spell._sp_type)
 		{
 		case SpellType::Transfer_SpellType:
-			{
-				TransferSpellEx *meta = (TransferSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
-				bSpellPerformed = DoTransferSpell(GetCastTarget(), meta);
-				break;
-			}
+		{
+			TransferSpellEx *meta = (TransferSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+			bSpellPerformed = DoTransferSpell(GetCastTarget(), meta);
+			break;
+		}
+
 		case SpellType::Boost_SpellType:
-			{
-				//bSpellPerformed = AdjustVital(GetCastTarget(), Random::GenInt(boostMin, boostMax), meta->_dt);
-				bSpellPerformed = AdjustVital(GetCastTarget());
+		{
+			//bSpellPerformed = AdjustVital(GetCastTarget(), Random::GenInt(boostMin, boostMax), meta->_dt);
+			bSpellPerformed = AdjustVital(GetCastTarget());
+			break;
+		}
+
+		case SpellType::FellowBoost_SpellType:
+		{
+			FellowshipBoostSpellEx *meta = (FellowshipBoostSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			CWeenieObject *target = GetCastTarget();
+
+			if (!target->HasFellowship())
 				break;
-			}
-		case SpellType::Dispel_SpellType:
+
+			else
 			{
-				DispelSpellEx *meta = (DispelSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
-
-				int minNum = (int) ((meta->_number * meta->_number_variance) + F_EPSILON);
-				int maxNum = (int) ((meta->_number * (1.0 / meta->_number_variance)) + F_EPSILON);
-
-				int numToDispel = Random::GenInt(minNum, maxNum);
-
-				CWeenieObject *pTarget = GetCastTarget();
-				if (pTarget)
+				Fellowship *fellow = target->GetFellowship();
+				CWorldLandBlock *block = target->GetBlock();
+				for (auto &entry : fellow->_fellowship_table)
 				{
-					if (!(m_SpellCastData.spell->_bitfield & Beneficial_SpellIndex))
+					if (CWeenieObject *member = g_pWorld->FindPlayer(entry.first))
 					{
-						if (pTarget->GetWorldTopLevelOwner()->ImmuneToDamage(m_pWeenie))
+						if (member->GetBlock() == block)
 						{
-							break;
+
+							bSpellPerformed = AdjustVital(member);
+						}
+					}
+				}
+				PerformFellowCastParticleEffects(fellow);
+			}
+
+			break;
+		}
+
+		case SpellType::Dispel_SpellType:
+		{
+			DispelSpellEx *meta = (DispelSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			int minNum = (int)((meta->_number * meta->_number_variance) + F_EPSILON);
+			int maxNum = (int)((meta->_number * (1.0 / meta->_number_variance)) + F_EPSILON);
+
+			int numToDispel = FastRNG.Next(minNum, maxNum);
+
+			CWeenieObject *pTarget = GetCastTarget();
+			if (pTarget)
+			{
+				if (!(m_SpellCastData.spell->_bitfield & Beneficial_SpellIndex))
+				{
+					if (pTarget->GetWorldTopLevelOwner()->ImmuneToDamage(m_pWeenie))
+					{
+						break;
+					}
+				}
+
+				PackableListWithJson<DWORD> possibleToDispel;
+
+				if (pTarget->m_Qualities._enchantment_reg)
+				{
+					if (pTarget->m_Qualities._enchantment_reg->_add_list)
+					{
+						for (auto &entry : *pTarget->m_Qualities._enchantment_reg->_add_list)
+						{
+							if (entry._power_level > meta->_max_power)
+								continue;
+							if (entry._power_level < meta->_min_power)
+								continue;
+							if (entry._duration <= 0.0)
+								continue;
+							if ((entry._id & 0xFFFF) == 666) // vitae
+								continue;
+
+							if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
+							{
+								if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry._id & 0xFFFF))
+								{
+									if (meta->_school && meta->_school != spellBaseEx->_school)
+										continue;
+
+									switch (meta->_align)
+									{
+									case 0: // neutral
+									{
+										break;
+									}
+									case 1: // good only
+									{
+										if (!(spellBaseEx->_bitfield & Beneficial_SpellIndex))
+											continue;
+
+										break;
+									}
+									case 2: // bad only
+									{
+										if (spellBaseEx->_bitfield & Beneficial_SpellIndex)
+											continue;
+
+										break;
+									}
+									}
+
+									possibleToDispel.push_back(entry._id);
+								}
+							}
 						}
 					}
 
-					PackableListWithJson<DWORD> possibleToDispel;
+					if (pTarget->m_Qualities._enchantment_reg->_mult_list)
+					{
+						for (auto &entry : *pTarget->m_Qualities._enchantment_reg->_mult_list)
+						{
+							if (entry._power_level > meta->_max_power)
+								continue;
+							if (entry._power_level < meta->_min_power)
+								continue;
+							if (entry._duration <= 0.0)
+								continue;
+							if ((entry._id & 0xFFFF) == 666) // vitae
+								continue;
+
+							if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
+							{
+								if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry._id & 0xFFFF))
+								{
+									if (meta->_school && meta->_school != spellBaseEx->_school)
+										continue;
+
+									switch (meta->_align)
+									{
+									case 0: // neutral
+									{
+										break;
+									}
+									case 1: // good only
+									{
+										if (!(spellBaseEx->_bitfield & Beneficial_SpellIndex))
+											continue;
+
+										break;
+									}
+									case 2: // bad only
+									{
+										if (spellBaseEx->_bitfield & Beneficial_SpellIndex)
+											continue;
+
+										break;
+									}
+									}
+
+									possibleToDispel.push_back(entry._id);
+								}
+							}
+						}
+					}
+				}
+
+				PackableListWithJson<DWORD> listToDispel;
+
+				if (meta->_number < 0)
+				{
+					// dispel all
+					listToDispel = possibleToDispel;
+				}
+				else
+				{
+					while (numToDispel > 0 && !possibleToDispel.empty())
+					{
+						std::list<DWORD>::iterator randomEntry = possibleToDispel.begin();
+						std::advance(randomEntry, FastRNG.NextUInt(0, (DWORD)(possibleToDispel.size() - 1)));
+
+						listToDispel.push_back(*randomEntry);
+						possibleToDispel.erase(randomEntry);
+
+						numToDispel--;
+					}
+				}
+
+				std::string spellNames;
+				for (auto entry : listToDispel)
+				{
+					if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
+					{
+						if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry & 0xFFFF))
+						{
+							if (spellNames.empty())
+							{
+								spellNames = spellBaseEx->_name;
+							}
+							else
+							{
+								spellNames += ", ";
+								spellNames += spellBaseEx->_name;
+							}
+						}
+					}
+				}
+
+				// "You cast Incantation of Nullify All Magic Self on yourself and dispel: ..."
+				// "Tusker's Friend casts Nullify All Magic Other on you, but the dispel fails."
+
+				if (listToDispel.size() > 0)
+				{
+					if (pTarget == m_pWeenie)
+					{
+						m_pWeenie->SendText(csprintf("You cast %s on yourself and dispel: %s", m_SpellCastData.spell->_name.c_str(), spellNames.c_str()), LTT_MAGIC);
+					}
+					else
+					{
+						m_pWeenie->SendText(csprintf("You cast %s on %s and dispel: %s", m_SpellCastData.spell->_name.c_str(), pTarget->GetName().c_str(), spellNames.c_str()), LTT_MAGIC);
+						pTarget->SendText(csprintf("%s casts %s on you and dispels: %s", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str(), spellNames.c_str()), LTT_MAGIC);
+					}
 
 					if (pTarget->m_Qualities._enchantment_reg)
 					{
-						if (pTarget->m_Qualities._enchantment_reg->_add_list)
-						{
-							for (auto &entry : *pTarget->m_Qualities._enchantment_reg->_add_list)
-							{
-								if (entry._power_level > meta->_max_power)
-									continue;
-								if (entry._power_level < meta->_min_power)
-									continue;
-								if (entry._duration <= 0.0)
-									continue;
-								if ((entry._id & 0xFFFF) == 666) // vitae
-									continue;
-								
-								if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
-								{
-									if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry._id & 0xFFFF))
-									{
-										if (meta->_school && meta->_school != spellBaseEx->_school)
-											continue;
+						pTarget->m_Qualities._enchantment_reg->RemoveEnchantments(&listToDispel);
 
-										switch (meta->_align)
-										{
-										case 0: // neutral
-											{
-												break;
-											}
-										case 1: // good only
-											{
-												if (!(spellBaseEx->_bitfield & Beneficial_SpellIndex))
-													continue;
-
-												break;
-											}
-										case 2: // bad only
-											{
-												if (spellBaseEx->_bitfield & Beneficial_SpellIndex)
-													continue;
-
-												break;
-											}
-										}
-
-										possibleToDispel.push_back(entry._id);
-									}
-								}
-							}
-						}
-
-						if (pTarget->m_Qualities._enchantment_reg->_mult_list)
-						{
-							for (auto &entry : *pTarget->m_Qualities._enchantment_reg->_mult_list)
-							{
-								if (entry._power_level > meta->_max_power)
-									continue;
-								if (entry._power_level < meta->_min_power)
-									continue;
-								if (entry._duration <= 0.0)
-									continue;
-								if ((entry._id & 0xFFFF) == 666) // vitae
-									continue;
-
-								if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
-								{
-									if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry._id & 0xFFFF))
-									{
-										if (meta->_school && meta->_school != spellBaseEx->_school)
-											continue;
-
-										switch (meta->_align)
-										{
-										case 0: // neutral
-											{
-												break;
-											}
-										case 1: // good only
-											{
-												if (!(spellBaseEx->_bitfield & Beneficial_SpellIndex))
-													continue;
-
-												break;
-											}
-										case 2: // bad only
-											{
-												if (spellBaseEx->_bitfield & Beneficial_SpellIndex)
-													continue;
-
-												break;
-											}
-										}
-
-										possibleToDispel.push_back(entry._id);
-									}
-								}
-							}
-						}
+						BinaryWriter expireMessage;
+						expireMessage.Write<DWORD>(0x2C8);
+						listToDispel.Pack(&expireMessage);
+						pTarget->SendNetMessage(&expireMessage, PRIVATE_MSG, TRUE, FALSE);
 					}
-					
-					PackableListWithJson<DWORD> listToDispel;
-
-					if (meta->_number < 0)
+				}
+				else
+				{
+					if (pTarget == m_pWeenie)
 					{
-						// dispel all
-						listToDispel = possibleToDispel;
+						m_pWeenie->SendText(csprintf("You cast %s on yourself, but the dispel fails.", m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
 					}
 					else
 					{
-						while (numToDispel > 0 && !possibleToDispel.empty())
-						{
-							std::list<DWORD>::iterator randomEntry = possibleToDispel.begin();
-							std::advance(randomEntry, Random::GenUInt(0, (DWORD)(possibleToDispel.size() - 1)));
-
-							listToDispel.push_back(*randomEntry);
-							possibleToDispel.erase(randomEntry);
-
-							numToDispel--;
-						}
+						m_pWeenie->SendText(csprintf("You cast %s on %s, but the dispel fails.", m_SpellCastData.spell->_name.c_str(), pTarget->GetName().c_str()), LTT_MAGIC);
+						pTarget->SendText(csprintf("%s casts %s on you, but the dispel fails.", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
 					}
+				}
 
-					std::string spellNames;
-					for (auto entry : listToDispel)
+				bSpellPerformed = true;
+			}
+
+			break;
+		}
+
+		case SpellType::FellowDispel_SpellType:
+		{
+			FellowshipDispelSpellEx *meta = (FellowshipDispelSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			int minNum = (int)((meta->_number * meta->_number_variance) + F_EPSILON);
+			int maxNum = (int)((meta->_number * (1.0 / meta->_number_variance)) + F_EPSILON);
+
+			int numToDispel = FastRNG.Next(minNum, maxNum);
+
+			CWeenieObject *target = GetCastTarget();
+
+			if (!target->HasFellowship())
+				break;
+
+			else
+			{
+				Fellowship *fellow = target->GetFellowship();
+				CWorldLandBlock *block = target->GetBlock();
+				for (auto &entry : fellow->_fellowship_table)
+				{
+					if (CWeenieObject *member = g_pWorld->FindPlayer(entry.first))
 					{
-						if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
+						if (member->GetBlock() == block)
 						{
-							if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry & 0xFFFF))
+
+							if (member)
 							{
-								if (spellNames.empty())
+								if (!(m_SpellCastData.spell->_bitfield & Beneficial_SpellIndex))
 								{
-									spellNames = spellBaseEx->_name;
+									if (member->GetWorldTopLevelOwner()->ImmuneToDamage(m_pWeenie))
+									{
+										break;
+									}
+								}
+
+								PackableListWithJson<DWORD> possibleToDispel;
+
+								if (member->m_Qualities._enchantment_reg)
+								{
+									if (member->m_Qualities._enchantment_reg->_add_list)
+									{
+										for (auto &entry : *member->m_Qualities._enchantment_reg->_add_list)
+										{
+											if (entry._power_level > meta->_max_power)
+												continue;
+											if (entry._power_level < meta->_min_power)
+												continue;
+											if (entry._duration <= 0.0)
+												continue;
+											if ((entry._id & 0xFFFF) == 666) // vitae
+												continue;
+
+											if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
+											{
+												if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry._id & 0xFFFF))
+												{
+													if (meta->_school && meta->_school != spellBaseEx->_school)
+														continue;
+
+													switch (meta->_align)
+													{
+													case 0: // neutral
+													{
+														break;
+													}
+													case 1: // good only
+													{
+														if (!(spellBaseEx->_bitfield & Beneficial_SpellIndex))
+															continue;
+
+														break;
+													}
+													case 2: // bad only
+													{
+														if (spellBaseEx->_bitfield & Beneficial_SpellIndex)
+															continue;
+
+														break;
+													}
+													}
+
+													possibleToDispel.push_back(entry._id);
+												}
+											}
+										}
+									}
+
+									if (member->m_Qualities._enchantment_reg->_mult_list)
+									{
+										for (auto &entry : *member->m_Qualities._enchantment_reg->_mult_list)
+										{
+											if (entry._power_level > meta->_max_power)
+												continue;
+											if (entry._power_level < meta->_min_power)
+												continue;
+											if (entry._duration <= 0.0)
+												continue;
+											if ((entry._id & 0xFFFF) == 666) // vitae
+												continue;
+
+											if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
+											{
+												if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry._id & 0xFFFF))
+												{
+													if (meta->_school && meta->_school != spellBaseEx->_school)
+														continue;
+
+													switch (meta->_align)
+													{
+													case 0: // neutral
+													{
+														break;
+													}
+													case 1: // good only
+													{
+														if (!(spellBaseEx->_bitfield & Beneficial_SpellIndex))
+															continue;
+
+														break;
+													}
+													case 2: // bad only
+													{
+														if (spellBaseEx->_bitfield & Beneficial_SpellIndex)
+															continue;
+
+														break;
+													}
+													}
+
+													possibleToDispel.push_back(entry._id);
+												}
+											}
+										}
+									}
+								}
+
+								PackableListWithJson<DWORD> listToDispel;
+
+								if (meta->_number < 0)
+								{
+									// dispel all
+									listToDispel = possibleToDispel;
 								}
 								else
 								{
-									spellNames += ", ";
-									spellNames += spellBaseEx->_name;
+									while (numToDispel > 0 && !possibleToDispel.empty())
+									{
+										std::list<DWORD>::iterator randomEntry = possibleToDispel.begin();
+										std::advance(randomEntry, FastRNG.NextUInt(0, (DWORD)(possibleToDispel.size() - 1)));
+
+										listToDispel.push_back(*randomEntry);
+										possibleToDispel.erase(randomEntry);
+
+										numToDispel--;
+									}
 								}
+
+								std::string spellNames;
+								for (auto entry : listToDispel)
+								{
+									if (CSpellTableEx *pSpellTableEx = g_pPortalDataEx->GetSpellTableEx())
+									{
+										if (const CSpellBaseEx *spellBaseEx = pSpellTableEx->GetSpellBase(entry & 0xFFFF))
+										{
+											if (spellNames.empty())
+											{
+												spellNames = spellBaseEx->_name;
+											}
+											else
+											{
+												spellNames += ", ";
+												spellNames += spellBaseEx->_name;
+											}
+										}
+									}
+								}
+
+								// "You cast Incantation of Nullify All Magic Self on yourself and dispel: ..."
+								// "Tusker's Friend casts Nullify All Magic Other on you, but the dispel fails."
+
+								if (listToDispel.size() > 0)
+								{
+									if (member == m_pWeenie)
+									{
+										m_pWeenie->SendText(csprintf("You cast %s on yourself and dispel: %s", m_SpellCastData.spell->_name.c_str(), spellNames.c_str()), LTT_MAGIC);
+									}
+									else
+									{
+										m_pWeenie->SendText(csprintf("You cast %s on %s and dispel: %s", m_SpellCastData.spell->_name.c_str(), member->GetName().c_str(), spellNames.c_str()), LTT_MAGIC);
+										member->SendText(csprintf("%s casts %s on you and dispels: %s", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str(), spellNames.c_str()), LTT_MAGIC);
+									}
+
+									if (member->m_Qualities._enchantment_reg)
+									{
+										member->m_Qualities._enchantment_reg->RemoveEnchantments(&listToDispel);
+
+										BinaryWriter expireMessage;
+										expireMessage.Write<DWORD>(0x2C8);
+										listToDispel.Pack(&expireMessage);
+										member->SendNetMessage(&expireMessage, PRIVATE_MSG, TRUE, FALSE);
+									}
+								}
+								else
+								{
+									if (member == m_pWeenie)
+									{
+										m_pWeenie->SendText(csprintf("You cast %s on yourself, but the dispel fails.", m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
+									}
+									else
+									{
+										m_pWeenie->SendText(csprintf("You cast %s on %s, but the dispel fails.", m_SpellCastData.spell->_name.c_str(), member->GetName().c_str()), LTT_MAGIC);
+										member->SendText(csprintf("%s casts %s on you, but the dispel fails.", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
+									}
+								}
+
+								bSpellPerformed = true;
 							}
 						}
 					}
-
-					// "You cast Incantation of Nullify All Magic Self on yourself and dispel: ..."
-					// "Tusker's Friend casts Nullify All Magic Other on you, but the dispel fails."
-
-					if (listToDispel.size() > 0)
-					{
-						if (pTarget == m_pWeenie)
-						{
-							m_pWeenie->SendText(csprintf("You cast %s on yourself and dispel: %s", m_SpellCastData.spell->_name.c_str(), spellNames.c_str()), LTT_MAGIC);
-						}
-						else
-						{
-							m_pWeenie->SendText(csprintf("You cast %s on %s and dispel: %s", m_SpellCastData.spell->_name.c_str(), pTarget->GetName().c_str(), spellNames.c_str()), LTT_MAGIC);
-							pTarget->SendText(csprintf("%s casts %s on you and dispels: %s", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str(), spellNames.c_str()), LTT_MAGIC);
-						}
-
-						if (pTarget->m_Qualities._enchantment_reg)
-						{
-							pTarget->m_Qualities._enchantment_reg->RemoveEnchantments(&listToDispel);
-
-							BinaryWriter expireMessage;
-							expireMessage.Write<DWORD>(0x2C8);
-							listToDispel.Pack(&expireMessage);
-							pTarget->SendNetMessage(&expireMessage, PRIVATE_MSG, TRUE, FALSE);
-						}
-					}
-					else
-					{
-						if (pTarget == m_pWeenie)
-						{
-							m_pWeenie->SendText(csprintf("You cast %s on yourself, but the dispel fails.", m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
-						}
-						else
-						{
-							m_pWeenie->SendText(csprintf("You cast %s on %s, but the dispel fails.", m_SpellCastData.spell->_name.c_str(), pTarget->GetName().c_str()), LTT_MAGIC);
-							pTarget->SendText(csprintf("%s casts %s on you, but the dispel fails.", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
-						}
-					}
-
-					bSpellPerformed = true;
 				}
-
-				break;
+				PerformFellowCastParticleEffects(fellow);
 			}
+			break;
+		}
+
 		case SpellType::PortalLink_SpellType:
-			{
-				if (m_pWeenie->HasOwner())
-					break;
-
-				PortalLinkSpellEx *meta = (PortalLinkSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
-
-				CWeenieObject *pTarget = GetCastTarget();
-				if (pTarget)
-				{
-					// portal bitmask, 0x10 = cannot be summoned
-					// portal bitmask, 0x20 = cannot be linked/recalled
-
-					int minLevel = pTarget->InqIntQuality(MIN_LEVEL_INT, 0);
-					int maxLevel = pTarget->InqIntQuality(MAX_LEVEL_INT, 0);
-
-					int currentLevel = m_pWeenie->InqIntQuality(LEVEL_INT, 1);
-
-					if (minLevel && currentLevel < minLevel)
-					{
-						m_pWeenie->SendText("You are not powerful enough to tie to this portal yet.", LTT_MAGIC);
-						break;
-					}
-					else if (maxLevel && currentLevel > maxLevel)
-					{
-						m_pWeenie->SendText("You are too powerful to tie to this portal.", LTT_MAGIC);
-						break;
-					}
-
-					switch (meta->_index)
-					{
-					case 1:
-						if (pTarget->m_Qualities.m_WeenieType == LifeStone_WeenieType)
-						{
-							m_pWeenie->m_Qualities.SetPosition(LINKED_LIFESTONE_POSITION, m_pWeenie->m_Position);
-							bSpellPerformed = true;
-						}
-						else
-						{
-							m_pWeenie->SendText("You cannot link that.", LTT_MAGIC);
-						}
-						break;
-
-					case 2: // primary portal tie
-						if (pTarget->m_Qualities.m_WeenieType == Portal_WeenieType &&
-							!(pTarget->m_Qualities.GetInt(PORTAL_BITMASK_INT, 0) & 0x20))
-						{
-							m_pWeenie->m_Qualities.SetDataID(LINKED_PORTAL_ONE_DID, pTarget->m_Qualities.id);
-							bSpellPerformed = true;
-						}
-						else
-						{
-							m_pWeenie->SendText("You cannot link that portal.", LTT_MAGIC);
-						}
-
-						break;
-
-					case 3: // secondary portal tie
-						if (pTarget->m_Qualities.m_WeenieType == Portal_WeenieType &&
-							!(pTarget->m_Qualities.GetInt(PORTAL_BITMASK_INT, 0) & 0x20))
-						{
-							m_pWeenie->m_Qualities.SetDataID(LINKED_PORTAL_TWO_DID, pTarget->m_Qualities.id);
-							bSpellPerformed = true;
-						}
-						else
-						{
-							m_pWeenie->SendText("You cannot link that portal.", LTT_MAGIC);
-						}
-
-						break;
-					}
-				}
-
-				if (m_pWeenie->IsAdmin())
-				{
-					// lifestone tie = 1
-					// primary portal tie = 2
-					// secondary portal tie = 3
-					// m_pWeenie->SendText(csprintf("Index: %d", meta->_index), LTT_DEFAULT);
-				}
-
+		{
+			if (m_pWeenie->HasOwner())
 				break;
-			}
-		case SpellType::PortalRecall_SpellType:
-			{
-				if (m_pWeenie->HasOwner())
-					break;
 
-				PortalRecallSpellEx *meta = (PortalRecallSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+			PortalLinkSpellEx *meta = (PortalLinkSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			CWeenieObject *pTarget = GetCastTarget();
+			if (pTarget)
+			{
+				// portal bitmask, 0x10 = cannot be summoned
+				// portal bitmask, 0x20 = cannot be linked/recalled
+
+				int minLevel = pTarget->InqIntQuality(MIN_LEVEL_INT, 0);
+				int maxLevel = pTarget->InqIntQuality(MAX_LEVEL_INT, 0);
+
+				int currentLevel = m_pWeenie->InqIntQuality(LEVEL_INT, 1);
+
+				if (minLevel && currentLevel < minLevel)
+				{
+					m_pWeenie->SendText("You are not powerful enough to tie to this portal yet.", LTT_MAGIC);
+					break;
+				}
+				else if (maxLevel && currentLevel > maxLevel)
+				{
+					m_pWeenie->SendText("You are too powerful to tie to this portal.", LTT_MAGIC);
+					break;
+				}
 
 				switch (meta->_index)
 				{
-				case 2: // lifestone recall
+				case 1:
+					if (pTarget->m_Qualities.m_WeenieType == LifeStone_WeenieType)
 					{
-						Position lifestone;
-						if (m_pWeenie->m_Qualities.InqPosition(LINKED_LIFESTONE_POSITION, lifestone) && lifestone.objcell_id != 0)
-						{
-							BeginPortalSend(lifestone);
-						}
-						else
-						{
-							m_pWeenie->SendText("You have no lifestone tied.", LTT_MAGIC);
-						}
-
+						m_pWeenie->m_Qualities.SetPosition(LINKED_LIFESTONE_POSITION, m_pWeenie->m_Position);
 						bSpellPerformed = true;
-						break;
 					}
-
-				case 3: // portal recall
+					else
 					{
-						Position lastPortalPos;
-						if (m_pWeenie->m_Qualities.InqPosition(LAST_PORTAL_POSITION, lastPortalPos) && lastPortalPos.objcell_id != 0)
-						{
-							BeginPortalSend(lastPortalPos);
-						}
-						else
-						{
-							m_pWeenie->SendText("You have not used a recallable portal yet.", LTT_MAGIC);
-						}
-
-						bSpellPerformed = true;
-						break;
+						m_pWeenie->SendText("You cannot link that.", LTT_MAGIC);
 					}
+					break;
 
-				case 4: // primary portal recall
+				case 2: // primary portal tie
+					if (pTarget->m_Qualities.m_WeenieType == Portal_WeenieType &&
+						!(pTarget->m_Qualities.GetInt(PORTAL_BITMASK_INT, 0) & 0x20))
 					{
-						DWORD portalDID = 0;
-						if (m_pWeenie->m_Qualities.InqDataID(LINKED_PORTAL_ONE_DID, portalDID) && portalDID != 0)
-						{
-							CWeenieDefaults *portalDefaults = NULL;
-
-							if (portalDID)
-							{
-								portalDefaults = g_pWeenieFactory->GetWeenieDefaults(portalDID);
-							}
-
-							int minLevel = 0;
-							int maxLevel = 0;
-							portalDefaults->m_Qualities.InqInt(MIN_LEVEL_INT, minLevel);
-							portalDefaults->m_Qualities.InqInt(MAX_LEVEL_INT, maxLevel);
-
-							int currentLevel = m_pWeenie->InqIntQuality(LEVEL_INT, 1);
-
-							if (minLevel && currentLevel < minLevel)
-							{
-								m_pWeenie->SendText("You are not powerful enough to recall this portal yet.", LTT_MAGIC);
-								break;
-							}
-							else if (maxLevel && currentLevel > maxLevel)
-							{
-								m_pWeenie->SendText("You are too powerful to recall this portal.", LTT_MAGIC);
-								break;
-							}
-
-							std::string restriction;
-							if (portalDefaults->m_Qualities.InqString(QUEST_RESTRICTION_STRING, restriction))
-							{
-								if (CPlayerWeenie *player = m_pWeenie->AsPlayer())
-								{
-									if (!player->InqQuest(restriction.c_str()))
-									{
-										m_pWeenie->SendText("You try to recall the portal but there is no effect.", LTT_MAGIC);
-										break;
-									}
-								}
-							}
-
-							Position portalDest;
-							if (portalDefaults->m_Qualities.InqPosition(DESTINATION_POSITION, portalDest) && portalDest.objcell_id != 0)
-							{
-								BeginPortalSend(portalDest);
-							}
-							else
-							{
-								m_pWeenie->SendText("The primary portal you have tied has no destination set.", LTT_MAGIC);
-							}
-						}
-						else
-						{
-							m_pWeenie->SendText("You have no primary portal tied.", LTT_MAGIC);
-						}
-
+						m_pWeenie->m_Qualities.SetDataID(LINKED_PORTAL_ONE_DID, pTarget->m_Qualities.id);
 						bSpellPerformed = true;
-						break;
+					}
+					else
+					{
+						m_pWeenie->SendText("You cannot link that portal.", LTT_MAGIC);
 					}
 
 					break;
 
-				case 5: // secondary portal recall
+				case 3: // secondary portal tie
+					if (pTarget->m_Qualities.m_WeenieType == Portal_WeenieType &&
+						!(pTarget->m_Qualities.GetInt(PORTAL_BITMASK_INT, 0) & 0x20))
 					{
-						DWORD portalDID = 0;
-						if (m_pWeenie->m_Qualities.InqDataID(LINKED_PORTAL_TWO_DID, portalDID) && portalDID != 0)
-						{
-							CWeenieDefaults *portalDefaults = NULL;
-
-							if (portalDID)
-							{
-								portalDefaults = g_pWeenieFactory->GetWeenieDefaults(portalDID);
-							}
-
-							int minLevel = 0;
-							int maxLevel = 0;
-							portalDefaults->m_Qualities.InqInt(MIN_LEVEL_INT, minLevel);
-							portalDefaults->m_Qualities.InqInt(MAX_LEVEL_INT, maxLevel);
-
-							int currentLevel = m_pWeenie->InqIntQuality(LEVEL_INT, 1);
-
-							if (minLevel && currentLevel < minLevel)
-							{
-								m_pWeenie->SendText("You are not powerful enough to recall this portal yet.", LTT_MAGIC);
-								break;
-							}
-							else if (maxLevel && currentLevel > maxLevel)
-							{
-								m_pWeenie->SendText("You are too powerful to recall this portal.", LTT_MAGIC);
-								break;
-							}
-
-							std::string restriction;
-							if (portalDefaults->m_Qualities.InqString(QUEST_RESTRICTION_STRING, restriction))
-							{
-								if (CPlayerWeenie *player = m_pWeenie->AsPlayer())
-								{
-									if (!player->InqQuest(restriction.c_str()))
-									{
-										m_pWeenie->SendText("You try to recall the portal but there is no effect.", LTT_MAGIC);
-										break;
-									}
-								}
-							}
-
-							Position portalDest;
-							if (portalDefaults->m_Qualities.InqPosition(DESTINATION_POSITION, portalDest) && portalDest.objcell_id != 0)
-							{
-								BeginPortalSend(portalDest);
-							}
-							else
-							{
-								m_pWeenie->SendText("The secondary portal you have tied has no destination set.", LTT_MAGIC);
-							}
-						}
-						else
-						{
-							m_pWeenie->SendText("You have no secondary portal tied.", LTT_MAGIC);
-						}
-
+						m_pWeenie->m_Qualities.SetDataID(LINKED_PORTAL_TWO_DID, pTarget->m_Qualities.id);
 						bSpellPerformed = true;
-						break;
+					}
+					else
+					{
+						m_pWeenie->SendText("You cannot link that portal.", LTT_MAGIC);
 					}
 
 					break;
 				}
+			}
 
-				if (m_pWeenie->IsAdmin())
+			if (m_pWeenie->IsAdmin())
+			{
+				// lifestone tie = 1
+				// primary portal tie = 2
+				// secondary portal tie = 3
+				// m_pWeenie->SendText(csprintf("Index: %d", meta->_index), LTT_DEFAULT);
+			}
+
+			break;
+		}
+
+		case SpellType::PortalRecall_SpellType:
+		{
+			if (m_pWeenie->HasOwner())
+				break;
+
+			if (m_pWeenie->AsPlayer() && m_pWeenie->AsPlayer()->CheckPKActivity())
+			{
+				m_pWeenie->SendText("You have been involved in Player Killer combat too recently!", LTT_MAGIC);
+				break;
+			}
+
+			PortalRecallSpellEx *meta = (PortalRecallSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			switch (meta->_index)
+			{
+			case 2: // lifestone recall
+			{
+				Position lifestone;
+				if (m_pWeenie->m_Qualities.InqPosition(LINKED_LIFESTONE_POSITION, lifestone) && lifestone.objcell_id != 0)
 				{
-					// lifestone recall = 2
-					// portal recall = 3
-					// primary portal recall = 4
-					// secondary portal recall = 5
-					// m_pWeenie->SendText(csprintf("Index: %d", meta->_index), LTT_DEFAULT);
+					BeginPortalSend(lifestone);
+				}
+				else
+				{
+					m_pWeenie->SendText("You have no lifestone tied.", LTT_MAGIC);
 				}
 
 				bSpellPerformed = true;
 				break;
 			}
-		case SpellType::Enchantment_SpellType:
+
+			case 3: // portal recall
 			{
-				EnchantmentSpellEx *meta = (EnchantmentSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
-
-				Enchantment enchant;
-				enchant._id = meta->_spell_id | ((DWORD)m_SpellCastData.serial << (DWORD)16);
-				enchant.m_SpellSetID = 0; // ???
-				enchant._spell_category = m_SpellCastData.spell->_category; // meta->_spellCategory;
-				enchant._power_level = m_SpellCastData.spell->_power;
-				enchant._start_time = Timer::cur_time;
-				enchant._duration = m_SpellCastData.equipped ? -1.0 : meta->_duration;
-				enchant._caster = m_pWeenie->GetID();
-				enchant._degrade_modifier = meta->_degrade_modifier;
-				enchant._degrade_limit = meta->_degrade_limit;
-				enchant._last_time_degraded = -1.0;
-				enchant._smod = meta->_smod;
-
-				std::list<CWeenieObject *> targets;
-				
-				if (CWeenieObject *castTarget = GetCastTarget())
+				Position lastPortalPos;
+				if (m_pWeenie->m_Qualities.InqPosition(LAST_PORTAL_POSITION, lastPortalPos) && lastPortalPos.objcell_id != 0)
 				{
-					if (m_SpellCastData.spell->InqTargetType() != ITEM_TYPE::TYPE_ITEM_ENCHANTABLE_TARGET)
-					{
-						targets.push_back(castTarget);
-					}
-					else
-					{
-						CContainerWeenie *container = castTarget->AsContainer();
-						if (container && !container->HasOwner())
-						{
-							for (auto wielded : container->m_Wielded)
-							{
-								if (wielded->GetItemType() & m_SpellCastData.spell->_non_component_target_type)
-								{
-									if (castTarget == m_pWeenie || wielded->parent) // for other targets, only physically wielded allowed
-									{
-										targets.push_back(wielded);
-									}
-								}
-							}
-						}
-						else
-						{
-							if (castTarget->GetItemType() & m_SpellCastData.spell->_non_component_target_type)
-							{
-								if (castTarget == m_pWeenie || castTarget->parent || !castTarget->HasOwner() || castTarget->GetWorldTopLevelOwner() == m_pWeenie) // for other targets, only physically wielded allowed
-								{
-									targets.push_back(castTarget);
-								}
-							}
-						}
-					}
-
-					for (auto target : targets)
-					{
-						// You cast Harlune's Blessing on yourself, refreshing Harlune's Blessing
-						// You cast Impenetrability III on Pathwarden Robe, surpassing Impenetrability II
-
-						CWeenieObject *topLevelOwner = target->GetWorldTopLevelOwner();
-
-						if (target->InqIntQuality(MAX_STACK_SIZE_INT, 1) > 1) //do not allow enchanting stackable items(ammunition)
-						{
-							m_pWeenie->SendText(csprintf("The %s can't be enchanted.", target->GetName().c_str()), LTT_MAGIC);
-							continue;
-						}
-
-						bool bAlreadyExisted = false;
-						if (target->m_Qualities._enchantment_reg && target->m_Qualities._enchantment_reg->IsEnchanted(enchant._id))
-							bAlreadyExisted = true;
-
-						if (m_pWeenie != target)
-						{
-							if (!(m_SpellCastData.spell->_bitfield & Beneficial_SpellIndex))
-							{
-								if (target->AsPlayer() && target->GetWorldTopLevelOwner()->ImmuneToDamage(m_pWeenie))
-								{
-									continue;
-								}
-							}
-
-							if (m_SpellCastData.spell->_bitfield & Resistable_SpellIndex)
-							{
-								if (topLevelOwner->TryMagicResist(m_SpellCastData.current_skill))
-								{
-									topLevelOwner->EmitSound(Sound_ResistSpell, 1.0f, false);
-									topLevelOwner->SendText(csprintf("You resist the spell cast by %s", m_pWeenie->GetName().c_str()), LTT_MAGIC);
-									m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
-									topLevelOwner->OnResistSpell(m_pWeenie);
-									continue;
-								}
-							}
-
-							if (int resistMagic = target->InqIntQuality(RESIST_MAGIC_INT, 0, FALSE))
-							{
-								if (resistMagic >= 9999 || ::TryMagicResist(m_SpellCastData.current_skill, (DWORD) resistMagic))
-								{
-									target->EmitSound(Sound_ResistSpell, 1.0f, false);
-
-									if (m_pWeenie != topLevelOwner)
-									{
-										topLevelOwner->SendText(csprintf("%s resists the spell cast by %s", m_pWeenie->GetName().c_str(), m_pWeenie->GetName().c_str()), LTT_MAGIC);
-									}
-
-									m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
-									target->OnResistSpell(m_pWeenie);
-									continue;
-								}
-							}
-						}
-
-						topLevelOwner->HandleAggro(m_pWeenie);
-
-						target->m_Qualities.UpdateEnchantment(&enchant);
-						target->NotifyEnchantmentUpdated(&enchant);
-
-						target->CheckVitalRanges();
-
-						if (m_pWeenie == target)
-						{
-							m_pWeenie->SendText(csprintf("You cast %s on yourself", m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
-						}
-						else
-						{
-							m_pWeenie->SendText(csprintf("You cast %s on %s", m_SpellCastData.spell->_name.c_str(), target->GetName().c_str()), LTT_MAGIC);
-
-							if (m_pWeenie != topLevelOwner)
-							{
-								if (target == topLevelOwner)
-									target->SendText(csprintf("%s cast %s on you", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
-								else
-									topLevelOwner->SendText(csprintf("%s cast %s on %s", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str(), target->GetName().c_str()), LTT_MAGIC);
-							}
-						}
-
-						bSpellPerformed = true;
-					}
+					BeginPortalSend(lastPortalPos);
+				}
+				else
+				{
+					m_pWeenie->SendText("You have not used a recallable portal yet.", LTT_MAGIC);
 				}
 
+				bSpellPerformed = true;
 				break;
 			}
 
-		case SpellType::PortalSummon_SpellType:
+			case 4: // primary portal recall
 			{
-				PortalSummonSpellEx *meta = (PortalSummonSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
-				if (!meta && (meta->_link == 1 || meta->_link == 2))
-					break;
-
-				Position spawnPos;
-				if (!m_pWeenie->m_Qualities.InqPosition(PORTAL_SUMMON_LOC_POSITION, spawnPos))
-				{
-					spawnPos = GetCastSource()->m_Position;
-					spawnPos.frame.m_origin += spawnPos.localtoglobalvec(Vector(0, 7, 0));
-				}
-
 				DWORD portalDID = 0;
 
-				Position dummyPos;
-				bool bNoLink = false;
 
-				switch (meta->_link)
+				DEBUG_DATA << "InqDataID (SpellcastingManager.cpp:1482): " << m_pWeenie->id << " " "... ";
+
+
+				if (m_pWeenie->m_Qualities.InqDataID(LINKED_PORTAL_ONE_DID, portalDID) && portalDID != 0)
 				{
-				case 1:
-					portalDID = m_pWeenie->InqDIDQuality(LINKED_PORTAL_ONE_DID, 0);
+					CWeenieDefaults *portalDefaults = NULL;
 
-					if (!portalDID && !m_pWeenie->m_Qualities.InqPosition(LINKED_PORTAL_ONE_POSITION, dummyPos))
+					if (portalDID)
 					{
-						m_pWeenie->SendText("You do not have a primary portal tied.", LTT_MAGIC);
-						bNoLink = true;
+						portalDefaults = g_pWeenieFactory->GetWeenieDefaults(portalDID);
 					}
-
-					break;
-
-				case 2:
-					portalDID = m_pWeenie->InqDIDQuality(LINKED_PORTAL_TWO_DID, 0);
-
-					if (!portalDID && !m_pWeenie->m_Qualities.InqPosition(LINKED_PORTAL_TWO_POSITION, dummyPos))
-					{
-						m_pWeenie->SendText("You do not have a secondary portal tied.", LTT_MAGIC);
-						bNoLink = true;
-					}
-
-					break;
-				}
-
-				if (bNoLink)
-				{
-					break;
-				}
-
-				CWeenieDefaults *portalDefaults = NULL;
-
-				bool canFlagForQuest = false;
-				if (portalDID)
-				{
-					portalDefaults = g_pWeenieFactory->GetWeenieDefaults(portalDID);
 
 					int minLevel = 0;
 					int maxLevel = 0;
 					portalDefaults->m_Qualities.InqInt(MIN_LEVEL_INT, minLevel);
 					portalDefaults->m_Qualities.InqInt(MAX_LEVEL_INT, maxLevel);
 
-					if (m_pWeenie->AsPlayer())
+					int currentLevel = m_pWeenie->InqIntQuality(LEVEL_INT, 1);
+
+					if (minLevel && currentLevel < minLevel)
 					{
-						int currentLevel = m_pWeenie->InqIntQuality(LEVEL_INT, 1);
+						m_pWeenie->SendText("You are not powerful enough to recall this portal yet.", LTT_MAGIC);
+						break;
+					}
+					else if (maxLevel && currentLevel > maxLevel)
+					{
+						m_pWeenie->SendText("You are too powerful to recall this portal.", LTT_MAGIC);
+						break;
+					}
 
-						if (minLevel && currentLevel < minLevel)
+					std::string restriction;
+					if (portalDefaults->m_Qualities.InqString(QUEST_RESTRICTION_STRING, restriction))
+					{
+						if (CPlayerWeenie *player = m_pWeenie->AsPlayer())
 						{
-							m_pWeenie->SendText("You are not powerful enough to summon this portal yet.", LTT_MAGIC);
-							break;
-						}
-						else if (maxLevel && currentLevel > maxLevel)
-						{
-							m_pWeenie->SendText("You are too powerful to summon this portal.", LTT_MAGIC);
-							break;
-						}
-
-						if ((portalDefaults->m_Qualities.GetInt(PORTAL_BITMASK_INT, 0) & 0x10))
-						{
-							m_pWeenie->SendText("That portal may not be summoned.", LTT_MAGIC);
-							break;
+							if (!player->InqQuest(restriction.c_str()))
+							{
+								m_pWeenie->SendText("You try to recall the portal but there is no effect.", LTT_MAGIC);
+								break;
+							}
 						}
 					}
+
+					Position portalDest;
+					if (portalDefaults->m_Qualities.InqPosition(DESTINATION_POSITION, portalDest) && portalDest.objcell_id != 0)
+					{
+						BeginPortalSend(portalDest);
+					}
 					else
-						canFlagForQuest = true;
+					{
+						m_pWeenie->SendText("The primary portal you have tied has no destination set.", LTT_MAGIC);
+					}
 				}
-				
-				CWeenieObject *weenie =  g_pWeenieFactory->CreateWeenieByClassID(W_PORTALGATEWAY_CLASS, &spawnPos, false);
-
-				if (weenie)
+				else
 				{
-					weenie->_timeToRot = Timer::cur_time + meta->_portal_lifetime;
-					weenie->_beganRot = false;
-					weenie->m_Qualities.SetFloat(TIME_TO_ROT_FLOAT, weenie->_timeToRot);
+					m_pWeenie->SendText("You have no primary portal tied.", LTT_MAGIC);
+				}
 
-					bool bHasDestination = false;
+				bSpellPerformed = true;
+				break;
+			}
 
-					if (portalDefaults)
+			break;
+
+			case 5: // secondary portal recall
+			{
+				DWORD portalDID = 0;
+
+				DEBUG_DATA << "InqDataID (SpellcastingManager.cpp:1549): " << m_pWeenie->id << " " "... ";
+
+				if (m_pWeenie->m_Qualities.InqDataID(LINKED_PORTAL_TWO_DID, portalDID) && portalDID != 0)
+				{
+					CWeenieDefaults *portalDefaults = NULL;
+
+					if (portalDID)
 					{
-						weenie->CopyPositionStat(DESTINATION_POSITION, &portalDefaults->m_Qualities);
-						weenie->CopyIntStat(MIN_LEVEL_INT, &portalDefaults->m_Qualities);
-						weenie->CopyIntStat(MAX_LEVEL_INT, &portalDefaults->m_Qualities);
-						weenie->CopyIntStat(PORTAL_BITMASK_INT, &portalDefaults->m_Qualities);
-						weenie->CopyStringStat(QUEST_RESTRICTION_STRING, &portalDefaults->m_Qualities);
-						if(canFlagForQuest)
-							weenie->CopyStringStat(QUEST_STRING, &portalDefaults->m_Qualities);
+						portalDefaults = g_pWeenieFactory->GetWeenieDefaults(portalDID);
 					}
-					else
-					{
-						switch (meta->_link)
-						{
-						case 1:
-							weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_ONE_POSITION, Position()));
-							break;
 
-						case 2:
-							weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_TWO_POSITION, Position()));
-							break;
+					int minLevel = 0;
+					int maxLevel = 0;
+					portalDefaults->m_Qualities.InqInt(MIN_LEVEL_INT, minLevel);
+					portalDefaults->m_Qualities.InqInt(MAX_LEVEL_INT, maxLevel);
+
+					int currentLevel = m_pWeenie->InqIntQuality(LEVEL_INT, 1);
+
+					if (minLevel && currentLevel < minLevel)
+					{
+						m_pWeenie->SendText("You are not powerful enough to recall this portal yet.", LTT_MAGIC);
+						break;
+					}
+					else if (maxLevel && currentLevel > maxLevel)
+					{
+						m_pWeenie->SendText("You are too powerful to recall this portal.", LTT_MAGIC);
+						break;
+					}
+
+					std::string restriction;
+					if (portalDefaults->m_Qualities.InqString(QUEST_RESTRICTION_STRING, restriction))
+					{
+						if (CPlayerWeenie *player = m_pWeenie->AsPlayer())
+						{
+							if (!player->InqQuest(restriction.c_str()))
+							{
+								m_pWeenie->SendText("You try to recall the portal but there is no effect.", LTT_MAGIC);
+								break;
+							}
 						}
 					}
 
-					g_pWorld->CreateEntity(weenie);
+					Position portalDest;
+					if (portalDefaults->m_Qualities.InqPosition(DESTINATION_POSITION, portalDest) && portalDest.objcell_id != 0)
+					{
+						BeginPortalSend(portalDest);
+					}
+					else
+					{
+						m_pWeenie->SendText("The secondary portal you have tied has no destination set.", LTT_MAGIC);
+					}
+				}
+				else
+				{
+					m_pWeenie->SendText("You have no secondary portal tied.", LTT_MAGIC);
+				}
+
+				bSpellPerformed = true;
+				break;
+			}
+
+			break;
+			}
+
+			if (m_pWeenie->IsAdmin())
+			{
+				// lifestone recall = 2
+				// portal recall = 3
+				// primary portal recall = 4
+				// secondary portal recall = 5
+				// m_pWeenie->SendText(csprintf("Index: %d", meta->_index), LTT_DEFAULT);
+			}
+
+			bSpellPerformed = true;
+			break;
+		}
+
+		case SpellType::Enchantment_SpellType:
+		{
+			EnchantmentSpellEx *meta = (EnchantmentSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			Enchantment enchant;
+			int buffDuration = m_pWeenie->InqIntQuality(AUGMENTATION_INCREASED_SPELL_DURATION_INT, 0);
+			enchant._id = meta->_spell_id | ((DWORD)m_SpellCastData.serial << (DWORD)16);
+			enchant.m_SpellSetID = 0; // ???
+			enchant._spell_category = m_SpellCastData.spell->_category; // meta->_spellCategory;
+			enchant._power_level = m_SpellCastData.spell->_power;
+			enchant._start_time = Timer::cur_time;
+			enchant._duration = m_SpellCastData.equipped ? -1.0 : meta->_duration * (buffDuration*0.2 + 1);
+			enchant._caster = m_pWeenie->GetID();
+			enchant._degrade_modifier = meta->_degrade_modifier;
+			enchant._degrade_limit = meta->_degrade_limit;
+			enchant._last_time_degraded = -1.0;
+			enchant._smod = meta->_smod;
+
+			//if (enchant._smod.type & Skill_EnchantmentType)
+			//{
+			//	enchant._smod.key = (DWORD)SkillTable::OldToNewSkill((STypeSkill)enchant._smod.key);
+			//}
+
+
+			std::list<CWeenieObject *> targets;
+
+			if (CWeenieObject *castTarget = GetCastTarget())
+			{
+				if (m_SpellCastData.spell->InqTargetType() != ITEM_TYPE::TYPE_ITEM_ENCHANTABLE_TARGET)
+				{
+					targets.push_back(castTarget);
+				}
+				else
+				{
+					CContainerWeenie *container = castTarget->AsContainer();
+					if (container && !container->HasOwner())
+					{
+						for (auto wielded : container->m_Wielded)
+						{
+							if (wielded->GetItemType() & m_SpellCastData.spell->_non_component_target_type)
+							{
+								if (castTarget == m_pWeenie || wielded->parent) // for other targets, only physically wielded allowed
+								{
+									targets.push_back(wielded);
+								}
+							}
+						}
+					}
+					else
+					{
+						if (castTarget->GetItemType() & m_SpellCastData.spell->_non_component_target_type)
+						{
+							if (castTarget == m_pWeenie || castTarget->parent || !castTarget->HasOwner() || castTarget->GetWorldTopLevelOwner() == m_pWeenie) // for other targets, only physically wielded allowed
+							{
+								targets.push_back(castTarget);
+							}
+						}
+					}
+				}
+
+				for (auto target : targets)
+				{
+					// You cast Harlune's Blessing on yourself, refreshing Harlune's Blessing
+					// You cast Impenetrability III on Pathwarden Robe, surpassing Impenetrability II
+
+					CWeenieObject *topLevelOwner = target->GetWorldTopLevelOwner();
+
+					if (target->InqIntQuality(MAX_STACK_SIZE_INT, 1) > 1) //do not allow enchanting stackable items(ammunition)
+					{
+						m_pWeenie->SendText(csprintf("The %s can't be enchanted.", target->GetName().c_str()), LTT_MAGIC);
+						continue;
+					}
+
+					bool bAlreadyExisted = false;
+					if (target->m_Qualities._enchantment_reg && target->m_Qualities._enchantment_reg->IsEnchanted(enchant._id))
+						bAlreadyExisted = true;
+
+					if (m_pWeenie != target)
+					{
+						if (!(m_SpellCastData.spell->_bitfield & Beneficial_SpellIndex))
+						{
+							if (m_pWeenie && target && m_pWeenie->AsPlayer() && target->AsPlayer())
+							{
+								m_pWeenie->AsPlayer()->UpdatePKActivity();
+								target->AsPlayer()->UpdatePKActivity();
+							}
+
+							if (target->AsPlayer() && target->GetWorldTopLevelOwner()->ImmuneToDamage(m_pWeenie))
+							{
+								continue;
+							}
+						}
+
+						if (m_SpellCastData.spell->_bitfield & Resistable_SpellIndex)
+						{
+							if (topLevelOwner->TryMagicResist(m_SpellCastData.current_skill))
+							{
+								topLevelOwner->EmitSound(Sound_ResistSpell, 1.0f, false);
+								topLevelOwner->SendText(csprintf("You resist the spell cast by %s", m_pWeenie->GetName().c_str()), LTT_MAGIC);
+								m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
+								topLevelOwner->OnResistSpell(m_pWeenie);
+								continue;
+							}
+						}
+
+						if (int resistMagic = target->InqIntQuality(RESIST_MAGIC_INT, 0, FALSE))
+						{
+							if (resistMagic >= 9999 || ::TryMagicResist(m_SpellCastData.current_skill, (DWORD)resistMagic))
+							{
+								target->EmitSound(Sound_ResistSpell, 1.0f, false);
+
+								if (m_pWeenie != topLevelOwner)
+								{
+									topLevelOwner->SendText(csprintf("%s resists the spell cast by %s", m_pWeenie->GetName().c_str(), m_pWeenie->GetName().c_str()), LTT_MAGIC);
+								}
+
+								m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
+								target->OnResistSpell(m_pWeenie);
+								continue;
+							}
+						}
+						if (int resistLifeMagic = target->InqIntQuality(LIFE_RESIST_RATING_INT, 0, FALSE))
+						{
+							if (resistLifeMagic >= 9999 || ::TryMagicResist(m_SpellCastData.current_skill, (DWORD)resistLifeMagic))
+							{
+								target->EmitSound(Sound_ResistSpell, 1.0f, false);
+
+								if (m_pWeenie != topLevelOwner)
+								{
+									topLevelOwner->SendText(csprintf("%s resists the spell cast by %s", m_pWeenie->GetName().c_str(), m_pWeenie->GetName().c_str()), LTT_MAGIC);
+								}
+
+								m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
+								target->OnResistSpell(m_pWeenie);
+								continue;
+							}
+						}
+						if (bool resistProjectileMagic = target->InqBoolQuality(NON_PROJECTILE_MAGIC_IMMUNE_BOOL, 0))
+						{
+							if (resistProjectileMagic == 1 || ::TryMagicResist(m_SpellCastData.current_skill, (DWORD)resistProjectileMagic))
+							{
+								target->EmitSound(Sound_ResistSpell, 1.0f, false);
+
+								if (m_pWeenie != topLevelOwner)
+								{
+									topLevelOwner->SendText(csprintf("%s resists the spell cast by %s", m_pWeenie->GetName().c_str(), m_pWeenie->GetName().c_str()), LTT_MAGIC);
+								}
+
+								m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
+								target->OnResistSpell(m_pWeenie);
+								continue;
+							}
+						}
+					}
+
+					topLevelOwner->HandleAggro(m_pWeenie);
+
+					target->m_Qualities.UpdateEnchantment(&enchant);
+					target->NotifyEnchantmentUpdated(&enchant);
+
+					target->CheckVitalRanges();
+
+					if (m_pWeenie == target)
+					{
+						m_pWeenie->SendText(csprintf("You cast %s on yourself", m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
+					}
+					else
+					{
+						m_pWeenie->SendText(csprintf("You cast %s on %s", m_SpellCastData.spell->_name.c_str(), target->GetName().c_str()), LTT_MAGIC);
+
+						if (m_pWeenie != topLevelOwner)
+						{
+							if (target == topLevelOwner)
+								target->SendText(csprintf("%s cast %s on you", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
+							else
+								topLevelOwner->SendText(csprintf("%s cast %s on %s", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str(), target->GetName().c_str()), LTT_MAGIC);
+						}
+					}
 
 					bSpellPerformed = true;
 				}
+			}
 
+			break;
+		}
+
+		case SpellType::FellowEnchantment_SpellType:
+		{
+			FellowshipEnchantmentSpellEx *meta = (FellowshipEnchantmentSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			Enchantment enchant;
+			enchant._id = meta->_spell_id | ((DWORD)m_SpellCastData.serial << (DWORD)16);
+			enchant.m_SpellSetID = 0; // ???
+			enchant._spell_category = m_SpellCastData.spell->_category; // meta->_spellCategory;
+			enchant._power_level = m_SpellCastData.spell->_power;
+			enchant._start_time = Timer::cur_time;
+			enchant._duration = m_SpellCastData.equipped ? -1.0 : meta->_duration;
+			enchant._caster = m_pWeenie->GetID();
+			enchant._degrade_modifier = meta->_degrade_modifier;
+			enchant._degrade_limit = meta->_degrade_limit;
+			enchant._last_time_degraded = -1.0;
+			enchant._smod = meta->_smod;
+
+			CWeenieObject *target = GetCastTarget();
+
+			if (!target->HasFellowship())
+				break;
+
+			else
+			{
+				Fellowship *fellow = target->GetFellowship();
+				CWorldLandBlock *block = target->GetBlock();
+				for (auto &entry : fellow->_fellowship_table)
+				{
+					if (CWeenieObject *member = g_pWorld->FindPlayer(entry.first))
+					{
+						if (member->GetBlock() == block)
+						{
+
+							//if (enchant._smod.type & Skill_EnchantmentType)
+							//{
+							//	enchant._smod.key = (DWORD)SkillTable::OldToNewSkill((STypeSkill)enchant._smod.key);
+							//}
+
+
+							std::list<CWeenieObject *> targets;
+
+							if (member)
+							{
+								if (m_SpellCastData.spell->InqTargetType() != ITEM_TYPE::TYPE_ITEM_ENCHANTABLE_TARGET)
+								{
+									targets.push_back(member);
+								}
+								else
+								{
+									CContainerWeenie *container = member->AsContainer();
+									if (container && !container->HasOwner())
+									{
+										for (auto wielded : container->m_Wielded)
+										{
+											if (wielded->GetItemType() & m_SpellCastData.spell->_non_component_target_type)
+											{
+												if (member == m_pWeenie || wielded->parent) // for other targets, only physically wielded allowed
+												{
+													targets.push_back(wielded);
+												}
+											}
+										}
+									}
+									else
+									{
+										if (member->GetItemType() & m_SpellCastData.spell->_non_component_target_type)
+										{
+											if (member == m_pWeenie || member->parent || !member->HasOwner() || member->GetWorldTopLevelOwner() == m_pWeenie) // for other targets, only physically wielded allowed
+											{
+												targets.push_back(member);
+											}
+										}
+									}
+								}
+
+								for (auto target : targets)
+								{
+									// You cast Harlune's Blessing on yourself, refreshing Harlune's Blessing
+									// You cast Impenetrability III on Pathwarden Robe, surpassing Impenetrability II
+
+									CWeenieObject *topLevelOwner = target->GetWorldTopLevelOwner();
+
+									if (target->InqIntQuality(MAX_STACK_SIZE_INT, 1) > 1) //do not allow enchanting stackable items(ammunition)
+									{
+										m_pWeenie->SendText(csprintf("The %s can't be enchanted.", target->GetName().c_str()), LTT_MAGIC);
+										continue;
+									}
+
+									bool bAlreadyExisted = false;
+									if (target->m_Qualities._enchantment_reg && target->m_Qualities._enchantment_reg->IsEnchanted(enchant._id))
+										bAlreadyExisted = true;
+
+									if (m_pWeenie != target)
+									{
+										if (!(m_SpellCastData.spell->_bitfield & Beneficial_SpellIndex))
+										{
+											if (target->AsPlayer() && target->GetWorldTopLevelOwner()->ImmuneToDamage(m_pWeenie))
+											{
+												continue;
+											}
+										}
+
+										if (m_SpellCastData.spell->_bitfield & Resistable_SpellIndex)
+										{
+											if (topLevelOwner->TryMagicResist(m_SpellCastData.current_skill))
+											{
+												topLevelOwner->EmitSound(Sound_ResistSpell, 1.0f, false);
+												topLevelOwner->SendText(csprintf("You resist the spell cast by %s", m_pWeenie->GetName().c_str()), LTT_MAGIC);
+												m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
+												topLevelOwner->OnResistSpell(m_pWeenie);
+												continue;
+											}
+										}
+
+										if (int resistMagic = target->InqIntQuality(RESIST_MAGIC_INT, 0, FALSE))
+										{
+											if (resistMagic >= 9999 || ::TryMagicResist(m_SpellCastData.current_skill, (DWORD)resistMagic))
+											{
+												target->EmitSound(Sound_ResistSpell, 1.0f, false);
+
+												if (m_pWeenie != topLevelOwner)
+												{
+													topLevelOwner->SendText(csprintf("%s resists the spell cast by %s", m_pWeenie->GetName().c_str(), m_pWeenie->GetName().c_str()), LTT_MAGIC);
+												}
+
+												m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
+												target->OnResistSpell(m_pWeenie);
+												continue;
+											}
+										}
+										if (int resistLifeMagic = target->InqIntQuality(LIFE_RESIST_RATING_INT, 0, FALSE))
+										{
+											if (resistLifeMagic >= 9999 || ::TryMagicResist(m_SpellCastData.current_skill, (DWORD)resistLifeMagic))
+											{
+												target->EmitSound(Sound_ResistSpell, 1.0f, false);
+
+												if (m_pWeenie != topLevelOwner)
+												{
+													topLevelOwner->SendText(csprintf("%s resists the spell cast by %s", m_pWeenie->GetName().c_str(), m_pWeenie->GetName().c_str()), LTT_MAGIC);
+												}
+
+												m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
+												target->OnResistSpell(m_pWeenie);
+												continue;
+											}
+										}
+										if (bool resistProjectileMagic = target->InqBoolQuality(NON_PROJECTILE_MAGIC_IMMUNE_BOOL, 0))
+										{
+											if (resistProjectileMagic == 1 || ::TryMagicResist(m_SpellCastData.current_skill, (DWORD)resistProjectileMagic))
+											{
+												target->EmitSound(Sound_ResistSpell, 1.0f, false);
+
+												if (m_pWeenie != topLevelOwner)
+												{
+													topLevelOwner->SendText(csprintf("%s resists the spell cast by %s", m_pWeenie->GetName().c_str(), m_pWeenie->GetName().c_str()), LTT_MAGIC);
+												}
+
+												m_pWeenie->SendText(csprintf("%s resists your spell", target->GetName().c_str()), LTT_MAGIC);
+												target->OnResistSpell(m_pWeenie);
+												continue;
+											}
+										}
+									}
+
+									topLevelOwner->HandleAggro(m_pWeenie);
+
+									target->m_Qualities.UpdateEnchantment(&enchant);
+									target->NotifyEnchantmentUpdated(&enchant);
+
+									target->CheckVitalRanges();
+
+									if (m_pWeenie == target)
+									{
+										m_pWeenie->SendText(csprintf("You cast %s on yourself", m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
+									}
+									else
+									{
+										m_pWeenie->SendText(csprintf("You cast %s on %s", m_SpellCastData.spell->_name.c_str(), target->GetName().c_str()), LTT_MAGIC);
+
+										if (m_pWeenie != topLevelOwner)
+										{
+											if (target == topLevelOwner)
+												target->SendText(csprintf("%s cast %s on you", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
+											else
+												topLevelOwner->SendText(csprintf("%s cast %s on %s", m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str(), target->GetName().c_str()), LTT_MAGIC);
+										}
+									}
+
+									bSpellPerformed = true;
+
+								}
+							}
+
+						}
+					}
+				}
+				PerformFellowCastParticleEffects(fellow);
+			}
+
+			break;
+		}
+
+		case SpellType::PortalSummon_SpellType:
+		{
+			if (m_pWeenie && m_pWeenie->AsPlayer() && m_pWeenie->AsPlayer()->CheckPKActivity())
+			{
+				m_pWeenie->SendText("You have been involved in Player Killer combat too recently!", LTT_MAGIC);
 				break;
 			}
 
-		case SpellType::PortalSending_SpellType:
+			PortalSummonSpellEx *meta = (PortalSummonSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+			if (!meta && (meta->_link == 1 || meta->_link == 2))
+				break;
+
+			Position spawnPos;
+			if (!m_pWeenie->m_Qualities.InqPosition(PORTAL_SUMMON_LOC_POSITION, spawnPos))
 			{
-				PortalSendingSpellEx *meta = (PortalSendingSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+				spawnPos = GetCastSource()->m_Position;
+				spawnPos.frame.m_origin += spawnPos.localtoglobalvec(Vector(0, 7, 0));
+			}
 
-				CWeenieObject *target = GetCastTarget();
+			DWORD portalDID = 0;
 
-				if (target)
+			Position dummyPos;
+			bool bNoLink = false;
+
+			switch (meta->_link)
+			{
+			case 1:
+				portalDID = m_pWeenie->InqDIDQuality(LINKED_PORTAL_ONE_DID, 0);
+
+				if (!portalDID && !m_pWeenie->m_Qualities.InqPosition(LINKED_PORTAL_ONE_POSITION, dummyPos))
 				{
-					PerformCastParticleEffects(); // perform particle effects early because teleporting will cancel it
-					target->Movement_Teleport(meta->_pos, false);
-					target->SendText("You have been teleported.", LTT_MAGIC);
+					m_pWeenie->SendText("You do not have a primary portal tied.", LTT_MAGIC);
+					bNoLink = true;
+				}
+
+				break;
+
+			case 2:
+				portalDID = m_pWeenie->InqDIDQuality(LINKED_PORTAL_TWO_DID, 0);
+
+				if (!portalDID && !m_pWeenie->m_Qualities.InqPosition(LINKED_PORTAL_TWO_POSITION, dummyPos))
+				{
+					m_pWeenie->SendText("You do not have a secondary portal tied.", LTT_MAGIC);
+					bNoLink = true;
 				}
 
 				break;
 			}
 
-		case SpellType::LifeProjectile_SpellType:
-		case SpellType::Projectile_SpellType:
+			if (bNoLink)
 			{
-				ProjectileSpellEx *meta = (ProjectileSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
-				bSpellPerformed = LaunchProjectileSpell(meta);
-				//bSpellPerformed = LaunchRingProjectiles(meta->_wcid);
-				
 				break;
 			}
+
+			CWeenieDefaults *portalDefaults = NULL;
+
+			bool canFlagForQuest = false;
+			if (portalDID)
+			{
+				portalDefaults = g_pWeenieFactory->GetWeenieDefaults(portalDID);
+
+				int minLevel = 0;
+				int maxLevel = 0;
+				portalDefaults->m_Qualities.InqInt(MIN_LEVEL_INT, minLevel);
+				portalDefaults->m_Qualities.InqInt(MAX_LEVEL_INT, maxLevel);
+
+				if (m_pWeenie->AsPlayer())
+				{
+					int currentLevel = m_pWeenie->InqIntQuality(LEVEL_INT, 1);
+					if (minLevel && currentLevel < minLevel)
+					{
+						m_pWeenie->SendText("You are not powerful enough to summon this portal yet.", LTT_MAGIC);
+						break;
+					}
+					else if (maxLevel && currentLevel > maxLevel)
+					{
+						m_pWeenie->SendText("You are too powerful to summon this portal.", LTT_MAGIC);
+						break;
+					}
+
+					if ((portalDefaults->m_Qualities.GetInt(PORTAL_BITMASK_INT, 0) & 0x10))
+					{
+						m_pWeenie->SendText("That portal may not be summoned.", LTT_MAGIC);
+						break;
+					}
+				}
+				else
+					canFlagForQuest = true;
+			}
+
+			CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(W_PORTALGATEWAY_CLASS, &spawnPos, false);
+
+			if (weenie)
+			{
+				weenie->_timeToRot = Timer::cur_time + meta->_portal_lifetime;
+				weenie->_beganRot = false;
+				weenie->m_Qualities.SetFloat(TIME_TO_ROT_FLOAT, weenie->_timeToRot);
+
+				bool bHasDestination = false;
+
+				if (portalDefaults)
+				{
+					weenie->CopyPositionStat(DESTINATION_POSITION, &portalDefaults->m_Qualities);
+					weenie->CopyIntStat(MIN_LEVEL_INT, &portalDefaults->m_Qualities);
+					weenie->CopyIntStat(MAX_LEVEL_INT, &portalDefaults->m_Qualities);
+					weenie->CopyIntStat(PORTAL_BITMASK_INT, &portalDefaults->m_Qualities);
+					weenie->CopyStringStat(QUEST_RESTRICTION_STRING, &portalDefaults->m_Qualities);
+					if (canFlagForQuest)
+						weenie->CopyStringStat(QUEST_STRING, &portalDefaults->m_Qualities);
+				}
+				else
+				{
+					switch (meta->_link)
+					{
+					case 1:
+						weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_ONE_POSITION, Position()));
+						break;
+
+					case 2:
+						weenie->m_Qualities.SetPosition(DESTINATION_POSITION, m_pWeenie->InqPositionQuality(LINKED_PORTAL_TWO_POSITION, Position()));
+						break;
+					}
+				}
+
+				g_pWorld->CreateEntity(weenie);
+
+				bSpellPerformed = true;
+			}
+
+			break;
+		}
+
+		case SpellType::PortalSending_SpellType:
+		{
+			PortalSendingSpellEx *meta = (PortalSendingSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			CWeenieObject *target = GetCastTarget();
+
+			if (m_pWeenie->AsPlayer() && m_pWeenie->AsPlayer()->CheckPKActivity() || m_pWeenie->HasOwner() && target->AsPlayer() && target->AsPlayer()->CheckPKActivity())
+			{
+				m_pWeenie->SendText("You have been involved in Player Killer combat too recently!", LTT_MAGIC);
+				break;
+			}
+
+
+			if (target)
+			{
+				PerformCastParticleEffects(); // perform particle effects early because teleporting will cancel it
+				target->Movement_Teleport(meta->_pos, false);
+				target->SendText("You have been teleported.", LTT_MAGIC);
+			}
+
+			break;
+		}
+
+		case SpellType::FellowPortalSending_SpellType:
+		{
+			FellowshipPortalSendingSpellEx *meta = (FellowshipPortalSendingSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+
+			CWeenieObject *target = GetCastTarget();
+
+			if (!target->HasFellowship())
+				break;
+
+			else
+			{
+				Fellowship *fellow = target->GetFellowship();
+				CWorldLandBlock *block = target->GetBlock();
+				for (auto &entry : fellow->_fellowship_table)
+				{
+					if (CWeenieObject *member = g_pWorld->FindPlayer(entry.first))
+					{
+						if (member->GetBlock() == block)
+						{
+
+							member->Movement_Teleport(meta->_pos, false);
+							member->SendText("You have been teleported.", LTT_MAGIC);
+						}
+					}
+				}
+				PerformFellowCastParticleEffects(fellow);
+			}
+
+			break;
+		}
+
+		case SpellType::LifeProjectile_SpellType:
+
+		case SpellType::Projectile_SpellType:
+		{
+			ProjectileSpellEx *meta = (ProjectileSpellEx *)m_SpellCastData.spellEx->_meta_spell._spell;
+			bSpellPerformed = LaunchProjectileSpell(meta);
+
+			break;
+		}
 		}
 	}
 
@@ -1645,26 +2260,26 @@ void CSpellcastingManager::TransferVitalPercent(CWeenieObject *target, float dra
 	switch (attribute)
 	{
 	case HEALTH_ATTRIBUTE_2ND:
-		{
-			selfAdjust = m_pWeenie->AdjustHealth(selfAdjust);
-			targetAdjust = target->AdjustHealth(targetAdjust);
-			vitalName = "health";
-			break;
-		}
+	{
+		selfAdjust = m_pWeenie->AdjustHealth(selfAdjust);
+		targetAdjust = target->AdjustHealth(targetAdjust);
+		vitalName = "health";
+		break;
+	}
 	case STAMINA_ATTRIBUTE_2ND:
-		{
-			selfAdjust = m_pWeenie->AdjustStamina(selfAdjust);
-			targetAdjust = target->AdjustStamina(targetAdjust);
-			vitalName = "stamina";
-			break;
-		}
+	{
+		selfAdjust = m_pWeenie->AdjustStamina(selfAdjust);
+		targetAdjust = target->AdjustStamina(targetAdjust);
+		vitalName = "stamina";
+		break;
+	}
 	case MANA_ATTRIBUTE_2ND:
-		{
-			selfAdjust = m_pWeenie->AdjustMana(selfAdjust);
-			targetAdjust = target->AdjustMana(targetAdjust);
-			vitalName = "mana";
-			break;
-		}
+	{
+		selfAdjust = m_pWeenie->AdjustMana(selfAdjust);
+		targetAdjust = target->AdjustMana(targetAdjust);
+		vitalName = "mana";
+		break;
+	}
 	default:
 		return;
 	}
@@ -1772,7 +2387,7 @@ bool CSpellcastingManager::DoTransferSpell(CWeenieObject *other, const TransferS
 		{
 			return false;
 		}
-		
+
 		// try to resist
 		if (m_SpellCastData.spell->_bitfield & Resistable_SpellIndex)
 		{
@@ -1801,7 +2416,7 @@ bool CSpellcastingManager::DoTransferSpell(CWeenieObject *other, const TransferS
 			break;
 		}
 
-		if(source->AsPlayer()) //only players have natural resistances.
+		if (source->AsPlayer()) //only players have natural resistances.
 		{
 			//Some combination of strength and endurance allows one to have a level of "natural resistances" to the 7 damage types.This caps out at a 50 % resistance(the equivalent to level 5 life prots) to these damage types.This resistance is not additive to life protections : higher level life protections will overwrite these natural resistances, although life vulns will take these natural resistances into account, if the player does not have a higher level life protection cast upon them.
 			//For example, a player will not get a free protective bonus from natural resistances if they have both Prot 7 and Vuln 7 cast upon them.The Prot and Vuln will cancel each other out, and since the Prot has overwritten the natural resistances, there will be no resistance bonus.
@@ -1871,7 +2486,7 @@ bool CSpellcastingManager::DoTransferSpell(CWeenieObject *other, const TransferS
 		sourceTakeAmount = (int)(destGiveAmount / (1.0 - meta->_lossPercent));
 	}
 	int sourceResultValue = sourceStartValue - sourceTakeAmount;
-	
+
 	if (sourceResultValue != sourceStartValue)
 	{
 		source->m_Qualities.SetAttribute2nd(meta->_src, sourceResultValue);
@@ -1892,7 +2507,7 @@ bool CSpellcastingManager::DoTransferSpell(CWeenieObject *other, const TransferS
 			source->SendText(csprintf(
 				"You cast %s on yourself and lose %d points of %s and also gain %d points of %s",
 				m_SpellCastData.spell->_name.c_str(), sourceTakeAmount, GetAttribute2ndName(meta->_src).c_str(), destGiveAmount, GetAttribute2ndName(meta->_dest).c_str()
-				), LTT_MAGIC);
+			), LTT_MAGIC);
 		}
 		else
 		{
@@ -1917,6 +2532,17 @@ bool CSpellcastingManager::DoTransferSpell(CWeenieObject *other, const TransferS
 				destGiveAmount, GetAttribute2ndName(meta->_dest).c_str(), m_SpellCastData.spell->_name.c_str(), source->GetName().c_str()), LTT_MAGIC);
 			source->SendText(csprintf("You lose %d points of %s due to %s casting %s on you",
 				sourceTakeAmount, GetAttribute2ndName(meta->_src).c_str(), m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str()), LTT_MAGIC);
+
+			if (dest->AsPlayer())
+			{
+				// update the target's health on the casting player asap
+				((CPlayerWeenie*)source)->RefreshTargetHealth();
+			}
+			if (source->AsPlayer())
+			{
+				// update the target's health on the casting player asap
+				((CPlayerWeenie*)dest)->RefreshTargetHealth();
+			}
 		}
 		else
 		{
@@ -1942,7 +2568,7 @@ bool CSpellcastingManager::AdjustVital(CWeenieObject *target)
 	int boostMax = abs(meta->_boost + meta->_boostVariance);
 
 	double preVarianceDamage = boostMax;
-	double damageOrHealAmount = Random::RollDice(boostMin, boostMax);
+	double damageOrHealAmount = FastRNG.NextDouble(boostMin, boostMax);
 
 	CWeenieObject *wand = g_pWorld->FindObject(m_SpellCastData.wand_id);
 	if (wand)
@@ -1956,6 +2582,12 @@ bool CSpellcastingManager::AdjustVital(CWeenieObject *target)
 	// negative spell
 	if (isDamage)
 	{
+		if (m_pWeenie && target && m_pWeenie->AsPlayer() && target->AsPlayer())
+		{
+			m_pWeenie->AsPlayer()->UpdatePKActivity();
+			target->AsPlayer()->UpdatePKActivity();
+		}
+
 		// try to resist
 		if (m_SpellCastData.spell->_bitfield & Resistable_SpellIndex)
 		{
@@ -2041,7 +2673,7 @@ void CSpellcastingManager::SendAdjustVitalText(CWeenieObject *target, int amount
 		bRestore = false;
 		amount = -amount;
 	}
-	
+
 	if (m_pWeenie != target)
 	{
 		m_pWeenie->SendText(csprintf("With %s you %s %d points of %s %s %s.",
@@ -2049,6 +2681,15 @@ void CSpellcastingManager::SendAdjustVitalText(CWeenieObject *target, int amount
 
 		target->SendText(csprintf("%s casts %s and %s %d points of your %s.",
 			m_pWeenie->GetName().c_str(), m_SpellCastData.spell->_name.c_str(), bRestore ? "restores" : "drains", amount, vitalName), LTT_MAGIC);
+
+		if (vitalName == "health")
+		{
+			if (m_pWeenie->AsPlayer())
+			{
+				// update the target's health on the casting player asap
+				((CPlayerWeenie*)m_pWeenie)->RefreshTargetHealth();
+			}
+		}
 	}
 	else
 	{
@@ -2074,14 +2715,14 @@ int CSpellcastingManager::CreatureBeginCast(DWORD target_id, DWORD spell_id)
 
 	if (!ResolveSpellBeingCasted())
 	{
-		LOG(Temp, Normal, "Player trying to cast unknown spell?\n");
+		SERVER_INFO << "Player trying to cast unknown spell?";
 		return WERROR_MAGIC_GENERAL_FAILURE;
 	}
 
 	m_bCasting = true;
 	m_PendingMotions.clear();
 	m_bTurningToObject = false;
-	
+
 	m_PendingMotions.push_back(SpellCastingMotion(Motion_CastSpell, 2.0f, true, true, 2.0f));
 	m_SpellCastData.power_level_of_power_component = m_SpellCastData.spell_formula.GetPowerLevelOfPowerComponent();
 
@@ -2098,7 +2739,7 @@ int CSpellcastingManager::CastSpellInstant(DWORD target_id, DWORD spell_id)
 	// incase we are interrupting a cast
 	SpellCastData oldData = m_SpellCastData;
 	bool bOldCasting = m_bCasting;
-	
+
 	m_bCasting = true;
 	m_SpellCastData = SpellCastData();
 	m_SpellCastData.caster_id = m_pWeenie->GetID();
@@ -2113,7 +2754,7 @@ int CSpellcastingManager::CastSpellInstant(DWORD target_id, DWORD spell_id)
 
 	if (ResolveSpellBeingCasted())
 	{
-		LaunchSpellEffect();		
+		LaunchSpellEffect();
 	}
 	else
 	{
@@ -2237,7 +2878,7 @@ int CSpellcastingManager::CheckTargetValidity()
 			if (pCastSource && m_SpellCastData.range_check)
 			{
 				if (pCastSource->DistanceTo(pTarget, true) > m_SpellCastData.max_range)
-					return WERROR_MAGIC_TARGET_OUT_OF_RANGE;
+					return WERROR_MISSILE_OUT_OF_RANGE;
 			}
 		}
 	}
@@ -2303,7 +2944,6 @@ int CSpellcastingManager::GenerateManaCost()
 	int difficulty = 50 + (25 * (spellLevel - 1));
 
 	return GetManaCost(m_SpellCastData.current_skill, difficulty, m_SpellCastData.spell->_base_mana, manaConvSkill);
-
 }
 
 int CSpellcastingManager::TryBeginCast(DWORD target_id, DWORD spell_id)
@@ -2349,7 +2989,7 @@ int CSpellcastingManager::TryBeginCast(DWORD target_id, DWORD spell_id)
 
 	if (!ResolveSpellBeingCasted())
 	{
-		LOG(Temp, Normal, "Player trying to cast unknown spell?\n"); 
+		SERVER_INFO << "Player trying to cast unknown spell?";
 		return WERROR_MAGIC_GENERAL_FAILURE;
 	}
 
@@ -2368,19 +3008,19 @@ int CSpellcastingManager::TryBeginCast(DWORD target_id, DWORD spell_id)
 	CContainerWeenie *caster = m_pWeenie->AsContainer();
 	if (caster != NULL && caster->InqBoolQuality(SPELL_COMPONENTS_REQUIRED_BOOL, FALSE) == TRUE)
 	{
-		CWeenieObject *foci = NULL;
+		bool foci;
 
 		if (g_pConfig->IsSpellFociEnabled())
 		{
 			switch (m_SpellCastData.spell->InqSkillForSpell())
 			{
-			case CREATURE_ENCHANTMENT_SKILL: foci = FindFociInContainer(caster, W_PACKCREATUREESSENCE_CLASS); break;
-			case ITEM_ENCHANTMENT_SKILL: foci = FindFociInContainer(caster, W_PACKITEMESSENCE_CLASS); break;
-			case LIFE_MAGIC_SKILL: foci = FindFociInContainer(caster, W_PACKLIFEESSENCE_CLASS); break;
-			case WAR_MAGIC_SKILL: foci = FindFociInContainer(caster, W_PACKWARESSENCE_CLASS); break;
+			case CREATURE_ENCHANTMENT_SKILL: foci = FindFociInContainer(caster, W_PACKCREATUREESSENCE_CLASS) || caster->InqIntQuality(AUGMENTATION_INFUSED_CREATURE_MAGIC_INT, 0); break;
+			case ITEM_ENCHANTMENT_SKILL: foci = FindFociInContainer(caster, W_PACKITEMESSENCE_CLASS) || caster->InqIntQuality(AUGMENTATION_INFUSED_ITEM_MAGIC_INT, 0); break;
+			case LIFE_MAGIC_SKILL: foci = FindFociInContainer(caster, W_PACKLIFEESSENCE_CLASS) || caster->InqIntQuality(AUGMENTATION_INFUSED_LIFE_MAGIC_INT, 0); break;
+			case WAR_MAGIC_SKILL: foci = FindFociInContainer(caster, W_PACKWARESSENCE_CLASS) || caster->InqIntQuality(AUGMENTATION_INFUSED_WAR_MAGIC_INT, 0); break;
 			}
 		}
-		
+
 		SpellFormula randomizedComponents;
 		randomizedComponents.CopyFrom(m_SpellCastData.spell->InqSpellFormula());
 
@@ -2394,7 +3034,7 @@ int CSpellcastingManager::TryBeginCast(DWORD target_id, DWORD spell_id)
 			if (componentId == 0)
 				continue;
 
-			if (foci != NULL)
+			if (foci != FALSE)
 			{
 				SpellComponentTable *pSpellComponents = MagicSystem::GetSpellComponentTable();
 				const SpellComponentBase *componentBase = pSpellComponents->InqSpellComponentBase(componentId);
@@ -2412,7 +3052,7 @@ int CSpellcastingManager::TryBeginCast(DWORD target_id, DWORD spell_id)
 
 			componentAmounts[componentId]++;
 		}
-		if (foci != NULL)
+		if (foci != FALSE)
 			componentAmounts[188]++; //if using foci, add one more prismatic taper.
 
 		m_UsedComponents.clear(); // clear the list of left overs from previous interrupted spell attempts.
@@ -2549,14 +3189,14 @@ void CSpellcastingManager::Update()
 			CWeenieObject *pTarget = g_pWorld->FindWithinPVS(m_pWeenie, m_TargetID);
 			if (pTarget)
 			{
-				LOG(Temp, Normal, "%f (%f %f) %08X %f %f %f\n",
-					HeadingToTarget(),
-					m_pWeenie->m_Position.heading(pTarget->m_Position),
-					m_pWeenie->m_Position.frame.get_heading(),
-					m_pWeenie->get_minterp()->interpreted_state.turn_command,
-					m_pWeenie->movement_manager->moveto_manager->sought_position.frame.get_heading(),
-					m_pWeenie->get_heading(),
-					m_pWeenie->get_heading() - m_pWeenie->movement_manager->moveto_manager->sought_position.frame.get_heading());
+			LOG(Temp, Normal, "%f (%f %f) %08X %f %f %f\n",
+			HeadingToTarget(),
+			m_pWeenie->m_Position.heading(pTarget->m_Position),
+			m_pWeenie->m_Position.frame.get_heading(),
+			m_pWeenie->get_minterp()->interpreted_state.turn_command,
+			m_pWeenie->movement_manager->moveto_manager->sought_position.frame.get_heading(),
+			m_pWeenie->get_heading(),
+			m_pWeenie->get_heading() - m_pWeenie->movement_manager->moveto_manager->sought_position.frame.get_heading());
 			}
 			*/
 		}

@@ -36,11 +36,13 @@ class Attribute : public PackObj, public PackableJson
 public:
 	Attribute();
 	virtual ~Attribute();
-	
+
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
 
 	static const char *GetAttributeName(STypeAttribute key); // custom
+	virtual DWORD GetMaxXp();
+	DWORD GetXpNeededForMaxXp();
 
 	DWORD _level_from_cp = 0;
 	DWORD _init_level = 0;
@@ -55,6 +57,8 @@ public:
 
 	DECLARE_PACKABLE()
 	DECLARE_PACKABLE_JSON()
+
+	virtual DWORD GetMaxXp() override;
 
 	DWORD _current = 0;
 };
@@ -103,6 +107,9 @@ public:
 	DECLARE_PACKABLE_JSON()
 
 	void SetSkillAdvancementClass(SKILL_ADVANCEMENT_CLASS val);
+	bool IsMaxed();
+	DWORD GetMaxXP();
+	DWORD GetXpNeededForMaxXp();
 
 	SKILL_ADVANCEMENT_CLASS _sac = UNDEF_SKILL_ADVANCEMENT_CLASS;
 	DWORD _pp = 0;
@@ -336,7 +343,6 @@ struct EnchantedQualityDetails
 		enchantedValue *= valueDecreasingMultiplier;
 		enchantedValue += valueIncreasingAdditive;
 		enchantedValue += valueDecreasingAdditive;
-
 		enchantedValue = max(enchantedValue, 0.0);
 
 		CalculateIncreasingEnchantedValue();
@@ -348,7 +354,6 @@ struct EnchantedQualityDetails
 		enchantedValue_DecreasingOnly = rawValue;
 		enchantedValue_DecreasingOnly *= valueDecreasingMultiplier;
 		enchantedValue_DecreasingOnly += valueDecreasingAdditive;
-
 		enchantedValue_DecreasingOnly = max(enchantedValue_DecreasingOnly, 0.0);
 	}
 
@@ -357,7 +362,6 @@ struct EnchantedQualityDetails
 		enchantedValue_IncreasingOnly = rawValue;
 		enchantedValue_IncreasingOnly *= valueIncreasingMultiplier;
 		enchantedValue_IncreasingOnly += valueIncreasingAdditive;
-
 		enchantedValue_IncreasingOnly = max(enchantedValue_IncreasingOnly, 0.0);
 	}
 };
@@ -583,9 +587,9 @@ public:
 	int initCreate = 1;
 	int maxNum = -1;
 	RegenerationType whenCreate = Destruction_RegenerationType;
-	RegenLocationType whereCreate  = Scatter_RegenLocationType;
+	RegenLocationType whereCreate = Scatter_RegenLocationType;
 	int stackSize = -1;
-	unsigned int ptid  = 0;
+	unsigned int ptid = 0;
 	float shade = 0.0f;
 	Position pos_val;
 	unsigned int slot = 0;
@@ -710,11 +714,11 @@ public:
 
 	BOOL HasSpellBook();
 	BOOL IsSpellKnown(const unsigned int spell);
-	
+
 	BOOL UpdateEnchantment(Enchantment *to_update);
 
 	void CopyFrom(CACQualities *pOther); // custom
-	
+
 	class AttributeCache *_attribCache = NULL;
 	PackableHashTableWithJson<STypeSkill, Skill> *_skillStatsTable = NULL;
 	class Body * _body = NULL;

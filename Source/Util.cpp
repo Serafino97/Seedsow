@@ -4,79 +4,6 @@
 
 #pragma comment(lib, "psapi.lib")
 
-namespace Random
-{
-	int m_iSeed;
-
-	void Init()
-	{
-		m_iSeed = (signed)((unsigned int)(time(0)*12345) << 2) - 144810491;
-	}
-
-	uint32_t GenRandom15()
-	{
-		m_iSeed = (m_iSeed * 214013) + 2531011;
-
-		uint32_t dwRandom15 = (unsigned)m_iSeed;
-		dwRandom15 >>= 16;
-		dwRandom15 &= 0x7FFF;
-
-		return dwRandom15;
-	}
-
-	uint32_t GenRandom32()
-	{
-		uint32_t dwRandom32 = 0;
-		dwRandom32 |= GenRandom15();
-		dwRandom32 <<= 15;
-		dwRandom32 |= GenRandom15();
-		dwRandom32 <<= 15;
-		dwRandom32 |= GenRandom15();
-
-		return dwRandom32;
-	}
-
-	uint32_t GenUInt(uint32_t min, uint32_t max)
-	{
-		if (max <= min)
-			return min;
-
-		unsigned int range = max - min;
-		return (min + (GenRandom32() % (range + 1)));
-	}
-
-	int32_t GenInt(int32_t min, int32_t max)
-	{
-		if (max <= min)
-			return min;
-
-		unsigned int range = (unsigned)(max - min);
-		return (min + (int)(GenRandom32() % (range + 1)));
-	}
-
-	double GenFloat(double min, double max)
-	{
-		if (max <= min)
-			return min;
-
-		double range = max - min;		
-		double value = min + (range * ((double)GenRandom32() / 0xFFFFFFFF));
-
-		return value;
-	}
-
-	float GenFloat(float min, float max)
-	{
-		if (max <= min)
-			return min;
-
-		double range = max - min;
-		double value = min + (range * ((double)GenRandom32() / 0xFFFFFFFF));
-
-		return (float)value;
-	}
-}
-
 void EnumerateFolderFilePaths(std::list<std::string> &results, const char *basePath, const char *fileMask, bool bSubFolders)
 {
 	std::string basePathStr(basePath);
@@ -267,6 +194,16 @@ bool ReplaceString(std::string& str, const std::string& from, const std::string&
 		return false;
 	str.replace(start_pos, from.length(), to);
 	return true;
+}
+
+std::string ReplaceInString(std::string subject, const std::string& search,
+	const std::string& replace) {
+	size_t pos = 0;
+	while ((pos = subject.find(search, pos)) != std::string::npos) {
+		subject.replace(pos, search.length(), replace);
+		pos += replace.length();
+	}
+	return subject;
 }
 
 static char szReadBuffer[1024];

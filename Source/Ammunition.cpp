@@ -5,6 +5,7 @@
 #include "Player.h"
 #include "World.h"
 #include "CombatFormulas.h"
+#include "fastrand.h"
 
 CAmmunitionWeenie::CAmmunitionWeenie()
 {
@@ -104,13 +105,13 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 		if (!pHit->ImmuneToDamage(pSource))
 		{
 			targetCollision = true;
-			
+
 			int preVarianceDamage;
 			float variance;
 
 			CWeenieObject *weapon = g_pWorld->FindObject(_launcherID);
 			if (weapon)
-			{		
+			{
 				bool bEvaded = false;
 
 				DWORD missileDefense = 0;
@@ -138,13 +139,19 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 				{
 					EmitSound(Sound_Collision, 1.0f);
 
+					if (pSource && pHit && pSource->AsPlayer() && pHit->AsPlayer())
+					{
+						pSource->AsPlayer()->UpdatePKActivity();
+						pHit->AsPlayer()->UpdatePKActivity();
+					}
+
 					// todo: do this in a better way?
 					// 50% medium, 30% low, 20% high
 					DAMAGE_QUADRANT hitQuadrant = DAMAGE_QUADRANT::DQ_UNDEF;
-					double roll = Random::RollDice(0.0, 1.0);
-					if(roll < 50.0)
+					double roll = FastRNG.NextDouble();
+					if (roll < 0.5)
 						hitQuadrant = DQ_MEDIUM;
-					else if (roll < 80.0)
+					else if (roll < 0.8)
 						hitQuadrant = DQ_LOW;
 					else
 						hitQuadrant = DQ_HIGH;
@@ -169,8 +176,8 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 					int elementalDamageBonus = weapon->InqDamageType() == InqDamageType() ? weapon->InqIntQuality(ELEMENTAL_DAMAGE_BONUS_INT, 0) : 0;
 					double damageMod = weapon->InqFloatQuality(DAMAGE_MOD_FLOAT, 1.0);
 
-					preVarianceDamage *= damageMod;
 					preVarianceDamage += weaponDamage + elementalDamageBonus;
+					preVarianceDamage *= damageMod;
 
 					DamageEventData dmgEvent;
 					dmgEvent.source = pSource;
@@ -182,7 +189,7 @@ BOOL CAmmunitionWeenie::DoCollision(const class AtkCollisionProfile &prof)
 					dmgEvent.attackSkill = _weaponSkill;
 					dmgEvent.attackSkillLevel = _weaponSkillLevel;
 					dmgEvent.preVarianceDamage = preVarianceDamage;
-					dmgEvent.baseDamage = preVarianceDamage * (1.0f - Random::GenFloat(0.0f, variance));
+					dmgEvent.baseDamage = preVarianceDamage * (1.0f - FastRNG.NextDouble(variance));
 
 					CalculateDamage(&dmgEvent);
 

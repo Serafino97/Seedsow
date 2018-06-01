@@ -81,6 +81,7 @@ public:
 	int LaunchBoltProjectile(DWORD wcid);
 	int LaunchRingProjectiles(DWORD wcid);
 	void PerformCastParticleEffects();
+	void PerformFellowCastParticleEffects(Fellowship *fellow);
 	int LaunchSpellEffect();
 	bool DoTransferSpell(CWeenieObject *other, const TransferSpellEx *meta);
 	bool AdjustVital(CWeenieObject *target);
@@ -88,8 +89,8 @@ public:
 	void TransferVitalPercent(CWeenieObject *target, float drainPercent, float infusePercent, STypeAttribute2nd attribute);
 	void SendTransferVitalPercentText(CWeenieObject *target, int drained, int infused, bool reversed, const char *vitalName);
 	//void SendAdjustedVitalText(CWeenieObject *target, unsigned int amount, STypeAttribute2nd attribute, bool beneficial);
-	Position GetSpellProjectileSpawnPosition(CSpellProjectile *pProjectile, CWeenieObject *pTarget, float *pDistToTarget);
-	Vector GetSpellProjectileSpawnVelocity(Position *pSpawnPosition, CWeenieObject *pTarget, float speed, bool tracked, bool gravity, Vector *pTargetDir);
+	Position GetSpellProjectileSpawnPosition(CSpellProjectile *pProjectile, CWeenieObject *pTarget, float *pDistToTarget, double dDir, bool bRing);
+	Vector GetSpellProjectileSpawnVelocity(Position *pSpawnPosition, CWeenieObject *pTarget, float speed, bool tracked, bool gravity, Vector *pTargetDir, double dDir, bool bRing);
 	void Update();
 
 	DWORD DetermineSkillLevelForSpell();

@@ -2,6 +2,7 @@
 #include "StdAfx.h"
 #include "TreasureTable.h"
 #include "RandomRange.h"
+#include "fastrand.h"
 
 DEFINE_PACK(TreasureEntry)
 {
@@ -267,7 +268,7 @@ int TreasureTable::GetLootTierForTreasureEntry(DWORD treasure_id)
 
 DWORD TreasureTable::RollRandomSlotFromList(const PackableList<TreasureEntry5>& list)
 {
-	float dice = getRandomDouble(0.0, 1.0); //g_pPhatSDK->GetRandomFloat(0.0, 1.0);
+	float dice = FastRNG.NextDouble(); //g_pPhatSDK->GetRandomFloat(0.0, 1.0);
 
 	for (auto &entry : list)
 	{
@@ -306,7 +307,7 @@ MaterialType TreasureTable::RollBaseMaterialFromMaterialCode(int materialCode, i
 		return MaterialType::Undef_MaterialType;
 	}
 	
-	float dice = getRandomDouble(0.0, 1.0);//g_pPhatSDK->GetRandomFloat(0.0, 1.0);
+	float dice = FastRNG.NextDouble();//g_pPhatSDK->GetRandomFloat(0.0, 1.0);
 
 	for (auto &entry : materialCodeMap->m_entries[tier - 1])
 	{
@@ -327,7 +328,7 @@ float TreasureTable::RollValueEnchantmentForMaterial(MaterialType mat, int tier)
 
 	if (valAdded)
 	{
-		return g_pPhatSDK->GetRandomFloat(*valAdded * 0.8, *valAdded);
+		return FastRNG.NextDouble(*valAdded * 0.8, *valAdded);
 	}
 
 	return 0.0f;
@@ -335,7 +336,7 @@ float TreasureTable::RollValueEnchantmentForMaterial(MaterialType mat, int tier)
 
 MaterialType TreasureTable::RollMaterialFromBaseMaterial(MaterialType baseMaterial, int tier)
 {
-	float dice = getRandomDouble(0.0, 1.0);//g_pPhatSDK->GetRandomFloat(0.0, 1.0);
+	float dice = FastRNG.NextDouble();//g_pPhatSDK->GetRandomFloat(0.0, 1.0);
 
 	PackableList<TreasureEntry5> *chanceList = NULL;
 	TreasureEntry7 *materialMap = NULL;
@@ -412,7 +413,7 @@ int TreasureTable::RollPaletteTemplateIDFromMaterialAndColorCode(MaterialType ba
 		return PALETTE_TEMPLATE_ID::UNDEF_PALETTE_TEMPLATE;
 	}
 
-	float dice = getRandomDouble(0.0, 1.0);//g_pPhatSDK->GetRandomFloat(0.0, 1.0);
+	float dice = FastRNG.NextDouble();//g_pPhatSDK->GetRandomFloat(0.0, 1.0);
 
 	for (auto &entry : *colorMap)
 	{
@@ -477,23 +478,23 @@ DWORD TreasureTable::RollManaStone(int tier)
 
 DWORD TreasureTable::RollItem(int tier)
 {
-	int initialTier = g_pPhatSDK->GetRandomInt(1, tier);
+	int initialTier = FastRNG.Next(1, tier);
 
-	if (g_pPhatSDK->GetRandomInt(0, 1))
+	if (FastRNG.Next(0, 1))
 	{
 		switch (initialTier)
 		{
 		case 1:
 			{
 				static DWORD lootSets[] = { 1, 2, 3, 42, 44, 45, 46 };
-				DWORD lootSet = lootSets[g_pPhatSDK->GetRandomUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
+				DWORD lootSet = lootSets[FastRNG.NextUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
 				return RollRandomSlotFromList(_treasure7[lootSet].m_entries[tier-1]);
 			}
 
 		case 2:
 			{
 				static DWORD lootSets[] = { 5, 6, 7 };
-				DWORD lootSet = lootSets[g_pPhatSDK->GetRandomUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
+				DWORD lootSet = lootSets[FastRNG.NextUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
 				return RollRandomSlotFromList(_treasure7[lootSet].m_entries[tier-1]);
 			}
 
@@ -501,7 +502,7 @@ DWORD TreasureTable::RollItem(int tier)
 		case 4:
 			{
 				static DWORD lootSets[] = { 4, 8, 9, 10 };
-				DWORD lootSet = lootSets[g_pPhatSDK->GetRandomUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
+				DWORD lootSet = lootSets[FastRNG.NextUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
 				return RollRandomSlotFromList(_treasure7[lootSet].m_entries[tier-1]);
 			}
 
@@ -509,7 +510,7 @@ DWORD TreasureTable::RollItem(int tier)
 		case 6:
 			{
 				static DWORD lootSets[] = { 11, 12, 13 };
-				DWORD lootSet = lootSets[g_pPhatSDK->GetRandomUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
+				DWORD lootSet = lootSets[FastRNG.NextUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
 				return RollRandomSlotFromList(_treasure7[lootSet].m_entries[tier-1]);
 			}
 		}
@@ -517,7 +518,7 @@ DWORD TreasureTable::RollItem(int tier)
 	else
 	{
 		static DWORD lootSets[] = { 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41 };
-		DWORD lootSet = lootSets[g_pPhatSDK->GetRandomUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
+		DWORD lootSet = lootSets[FastRNG.NextUInt(0, (sizeof(lootSets) / sizeof(DWORD)) - 1)];
 		return RollRandomSlotFromList(_treasure7[lootSet].m_entries[tier - 1]);
 	}
 
@@ -528,12 +529,12 @@ int TreasureTable::RollWorkmanship(int tier)
 {
 	switch (tier)
 	{
-	case 1: return g_pPhatSDK->GetRandomInt(1, 5);
-	case 2: return g_pPhatSDK->GetRandomInt(2, 6);
-	case 3: return g_pPhatSDK->GetRandomInt(3, 7);
-	case 4: return g_pPhatSDK->GetRandomInt(3, 8);
-	case 5: return g_pPhatSDK->GetRandomInt(3, 9);
-	case 6: return g_pPhatSDK->GetRandomInt(4, 10);
+	case 1: return FastRNG.Next(1, 5);
+	case 2: return FastRNG.Next(2, 6);
+	case 3: return FastRNG.Next(3, 7);
+	case 4: return FastRNG.Next(3, 8);
+	case 5: return FastRNG.Next(3, 9);
+	case 6: return FastRNG.Next(4, 10);
 	}
 
 	return 1;
@@ -565,7 +566,7 @@ std::list<DWORD> TreasureTable::RollArmorSpells(int spellCode, int tier)
 	{
 		for (auto &entry : _itemBaneSpells)
 		{
-			if (entry.second.chances[tier - 1] >= Random::RollDice(0.0f, 1.0f))
+			if (entry.second.chances[tier - 1] >= FastRNG.NextDouble())
 				spells.push_back(entry.first);
 		}
 	}
@@ -581,7 +582,7 @@ std::list<DWORD> TreasureTable::RollMeleeWeaponSpells(int spellCode, int tier)
 	{
 		for (auto &entry : _meleeWeaponSpells)
 		{
-			if (entry.second.chances[tier - 1] >= Random::RollDice(0.0f, 1.0f))
+			if (entry.second.chances[tier - 1] >= FastRNG.NextDouble())
 				spells.push_back(entry.first);
 		}
 	}
@@ -597,7 +598,7 @@ std::list<DWORD> TreasureTable::RollMissileWeaponSpells(int spellCode, int tier)
 	{
 		for (auto &entry : _missileWeaponSpells)
 		{
-			if (entry.second.chances[tier - 1] >= Random::RollDice(0.0f, 1.0f))
+			if (entry.second.chances[tier - 1] >= FastRNG.NextDouble())
 				spells.push_back(entry.first);
 		}
 	}
@@ -613,7 +614,7 @@ std::list<DWORD> TreasureTable::RollCasterSpells(int spellCode, int tier)
 	{
 		for (auto &entry : _casterWeaponSpells)
 		{
-			if (entry.second.chances[tier - 1] >= Random::RollDice(0.0f, 1.0f))
+			if (entry.second.chances[tier - 1] >= FastRNG.NextDouble())
 				spells.push_back(entry.first);
 		}
 	}

@@ -152,7 +152,7 @@ DEFINE_UNPACK_JSON(PageDataList)
 
 	const json &pagesEntry = reader["pages"];
 
-	numPages = (DWORD) pagesEntry.size();
+	numPages = (DWORD)pagesEntry.size();
 
 	for (const json &pageEntry : pagesEntry)
 	{
@@ -205,8 +205,8 @@ DEFINE_PACK_JSON(GeneratorProfile)
 	writer["delay"] = delay;
 	writer["initCreate"] = initCreate;
 	writer["maxNum"] = maxNum;
-	writer["whenCreate"] = (int) whenCreate;
-	writer["whereCreate"] = (int) whereCreate;
+	writer["whenCreate"] = (int)whenCreate;
+	writer["whereCreate"] = (int)whereCreate;
 	writer["stackSize"] = stackSize;
 	writer["ptid"] = ptid;
 	writer["shade"] = shade;
@@ -221,8 +221,8 @@ DEFINE_UNPACK_JSON(GeneratorProfile)
 	delay = reader["delay"];
 	initCreate = reader["initCreate"];
 	maxNum = reader["maxNum"];
-	whenCreate = (RegenerationType) (int) reader["whenCreate"];
-	whereCreate = (RegenLocationType) (int) reader["whereCreate"];
+	whenCreate = (RegenerationType)(int)reader["whenCreate"];
+	whereCreate = (RegenLocationType)(int)reader["whereCreate"];
 	stackSize = reader["stackSize"];
 	ptid = reader["ptid"];
 	shade = reader["shade"];
@@ -828,7 +828,7 @@ DEFINE_PACK(Emote)
 
 DEFINE_UNPACK(Emote)
 {
-	type = (EmoteType) pReader->Read<DWORD>();
+	type = (EmoteType)pReader->Read<DWORD>();
 	delay = pReader->Read<float>();
 	extent = pReader->Read<float>();
 
@@ -988,11 +988,11 @@ DEFINE_UNPACK(Emote)
 		break;
 
 	case 7:
-		pscript = (PScriptType) pReader->Read<DWORD>();
+		pscript = (PScriptType)pReader->Read<DWORD>();
 		break;
 
 	case 9:
-		sound = (SoundType) pReader->Read<DWORD>();
+		sound = (SoundType)pReader->Read<DWORD>();
 		break;
 
 	case 0x1Cu:
@@ -1081,7 +1081,7 @@ DEFINE_UNPACK(Emote)
 
 DEFINE_PACK_JSON(Emote)
 {
-	writer["type"] = (int) type;
+	writer["type"] = (int)type;
 	writer["delay"] = delay;
 	writer["extent"] = extent;
 
@@ -1225,11 +1225,11 @@ DEFINE_PACK_JSON(Emote)
 		break;
 
 	case 7:
-		writer["pscript"] = (int) pscript;
+		writer["pscript"] = (int)pscript;
 		break;
 
 	case 9:
-		writer["sound"] = (INT) sound;
+		writer["sound"] = (INT)sound;
 		break;
 
 	case 0x1Cu:
@@ -1309,7 +1309,7 @@ DEFINE_PACK_JSON(Emote)
 
 DEFINE_UNPACK_JSON(Emote)
 {
-	type = (EmoteType) (int) reader["type"];
+	type = (EmoteType)(int)reader["type"];
 	delay = reader["delay"];
 	extent = reader["extent"];
 
@@ -1456,7 +1456,7 @@ DEFINE_UNPACK_JSON(Emote)
 		break;
 
 	case 7:
-		pscript = (PScriptType)(int) reader["pscript"];
+		pscript = (PScriptType)(int)reader["pscript"];
 		break;
 
 	case 9:
@@ -1596,7 +1596,7 @@ DEFINE_PACK(EmoteSet)
 
 DEFINE_UNPACK(EmoteSet)
 {
-	category = (EmoteCategory) pReader->Read<DWORD>();
+	category = (EmoteCategory)pReader->Read<DWORD>();
 	probability = pReader->Read<float>();
 
 	switch (category)
@@ -1647,7 +1647,7 @@ DEFINE_UNPACK(EmoteSet)
 
 DEFINE_PACK_JSON(EmoteSet)
 {
-	writer["category"] = (int) category;
+	writer["category"] = (int)category;
 	writer["probability"] = probability;
 
 	switch (category)
@@ -1701,7 +1701,7 @@ DEFINE_PACK_JSON(EmoteSet)
 
 DEFINE_UNPACK_JSON(EmoteSet)
 {
-	category = (EmoteCategory) (int) reader["category"];
+	category = (EmoteCategory)(int)reader["category"];
 	probability = reader["probability"];
 
 	switch (category)
@@ -1818,7 +1818,7 @@ DEFINE_UNPACK_JSON(EventFilter)
 
 	const json &events = reader["events"];
 
-	num_events = (unsigned int) events.size();
+	num_events = (unsigned int)events.size();
 
 	event_filter = new unsigned int[num_events];
 	for (DWORD i = 0; i < num_events; i++)
@@ -2346,7 +2346,7 @@ BOOL CEnchantmentRegistry::IsEnchanted(const unsigned int spell)
 		return _vitae != NULL;
 
 	if (CEnchantmentRegistry::IsEnchantmentInList(spell, _cooldown_list))
-		return TRUE;	
+		return TRUE;
 	if (CEnchantmentRegistry::IsEnchantmentInList(spell, _mult_list))
 		return TRUE;
 	if (CEnchantmentRegistry::IsEnchantmentInList(spell, _add_list))
@@ -2376,7 +2376,7 @@ BOOL CEnchantmentRegistry::AddEnchantmentToList(Enchantment *to_update, Packable
 {
 	if (!*list)
 		*list = new PackableListWithJson<Enchantment>();
-	
+
 	if (!AttemptToReplaceSpellInList(to_update, list))
 	{
 		(*list)->push_front(*to_update);
@@ -2430,7 +2430,7 @@ BOOL CEnchantmentRegistry::UpdateEnchantment(Enchantment *to_update)
 
 	if (to_update->_smod.type & Cooldown_EnchantmentType && ReplaceEnchantmentInList(to_update, _cooldown_list))
 		return TRUE;
-	
+
 	if (to_update->_smod.type & Multiplicative_EnchantmentType)
 	{
 		if (ReplaceEnchantmentInList(to_update, _mult_list))
@@ -2474,7 +2474,7 @@ BOOL CEnchantmentRegistry::RemoveEnchantmentFromList(const unsigned int eid, Pac
 		}
 
 		if (bRemoved)
-			UpdateSpellTotals((WORD) eid, -1);
+			UpdateSpellTotals((WORD)eid, -1);
 	}
 
 	return bRemoved;
@@ -2890,7 +2890,7 @@ BodyPart &BodyPart::operator=(BodyPart const &other)
 	_dvar = other._dvar;
 	_acache = other._acache;
 	_bh = other._bh;
-	
+
 	if (!other._bpsd)
 	{
 		if (_bpsd)
@@ -2926,13 +2926,13 @@ DEFINE_UNPACK(BodyPart)
 {
 	int hasBPSD = pReader->Read<int>();
 
-	_dtype = (DAMAGE_TYPE) pReader->Read<DWORD>();
+	_dtype = (DAMAGE_TYPE)pReader->Read<DWORD>();
 	_dval = pReader->Read<int>();
 	_dvar = pReader->Read<float>();
 	_acache.UnPack(pReader);
 	_bh = (BODY_HEIGHT)pReader->Read<DWORD>();
 
-	SafeDelete (_bpsd);
+	SafeDelete(_bpsd);
 	if (hasBPSD)
 	{
 		_bpsd = new BodyPartSelectionData();
@@ -2944,11 +2944,11 @@ DEFINE_UNPACK(BodyPart)
 
 DEFINE_PACK_JSON(BodyPart)
 {
-	writer["dtype"] = (DWORD) _dtype;
+	writer["dtype"] = (DWORD)_dtype;
 	writer["dval"] = _dval;
 	writer["dvar"] = _dvar;
 	_acache.PackJson(writer["acache"]);
-	writer["bh"] = (DWORD) _bh;
+	writer["bh"] = (DWORD)_bh;
 
 	if (_bpsd)
 	{
@@ -2958,11 +2958,11 @@ DEFINE_PACK_JSON(BodyPart)
 
 DEFINE_UNPACK_JSON(BodyPart)
 {
-	_dtype = (DAMAGE_TYPE) (DWORD) reader["dtype"];
+	_dtype = (DAMAGE_TYPE)(DWORD)reader["dtype"];
 	_dval = reader["dval"];
 	_dvar = reader["dvar"];
 	_acache.UnPackJson(reader["acache"]);
-	_bh = (BODY_HEIGHT) (DWORD) reader["bh"];
+	_bh = (BODY_HEIGHT)(DWORD)reader["bh"];
 
 	SafeDelete(_bpsd);
 
@@ -3053,6 +3053,23 @@ const char *Attribute::GetAttributeName(STypeAttribute key) // custom
 	}
 }
 
+DWORD Attribute::GetMaxXp()
+{
+	return ExperienceSystem::ExperienceToAttributeLevel(ExperienceSystem::GetMaxAttributeLevel());
+}
+
+DWORD Attribute::GetXpNeededForMaxXp()
+{
+	const DWORD currentAttrXp = _cp_spent;
+
+	// This uses the virtual method, so this method works for both Attribute and SecondaryAttribute
+	const DWORD maxAttrXp = GetMaxXp();
+
+	const DWORD amountNeededForMaxXp = maxAttrXp - currentAttrXp;
+
+	return amountNeededForMaxXp;
+}
+
 SecondaryAttribute::SecondaryAttribute()
 {
 	_current = 0;
@@ -3060,6 +3077,11 @@ SecondaryAttribute::SecondaryAttribute()
 
 SecondaryAttribute::~SecondaryAttribute()
 {
+}
+
+DWORD SecondaryAttribute::GetMaxXp()
+{
+	return ExperienceSystem::ExperienceToAttribute2ndLevel(ExperienceSystem::GetMaxAttribute2ndLevel());
 }
 
 DEFINE_UNPACK(SecondaryAttribute)
@@ -3354,14 +3376,14 @@ BOOL AttributeCache::SetAttribute(STypeAttribute key, DWORD val)
 	case STRENGTH_ATTRIBUTE:
 		if (!_strength)
 			_strength = new Attribute();
-		
+
 		_strength->_init_level = val;
 		return TRUE;
 
 	case ENDURANCE_ATTRIBUTE:
 		if (!_endurance)
 			_endurance = new Attribute();
-		
+
 		_endurance->_init_level = val;
 		return TRUE;
 
@@ -3375,21 +3397,21 @@ BOOL AttributeCache::SetAttribute(STypeAttribute key, DWORD val)
 	case QUICKNESS_ATTRIBUTE:
 		if (!_quickness)
 			_quickness = new Attribute();
-		
+
 		_quickness->_init_level = val;
 		return TRUE;
 
 	case FOCUS_ATTRIBUTE:
 		if (!_focus)
 			_focus = new Attribute();
-		
+
 		_focus->_init_level = val;
 		return TRUE;
 
 	case SELF_ATTRIBUTE:
 		if (!_self)
 			_self = new Attribute();
-		
+
 		_self->_init_level = val;
 		return TRUE;
 	}
@@ -3726,7 +3748,7 @@ DEFINE_UNPACK(Skill)
 	DWORD ppFlag = pReader->Read<DWORD>();
 	_level_from_pp = ppFlag & 0xFFFF;
 
-	_sac = (SKILL_ADVANCEMENT_CLASS) pReader->Read<int>();
+	_sac = (SKILL_ADVANCEMENT_CLASS)pReader->Read<int>();
 	_pp = pReader->Read<DWORD>();
 	_init_level = pReader->Read<DWORD>();
 	_resistance_of_last_check = pReader->Read<long>();
@@ -3770,6 +3792,55 @@ void Skill::SetSkillAdvancementClass(SKILL_ADVANCEMENT_CLASS val)
 {
 	_sac = val;
 	_level_from_pp = ExperienceSystem::SkillLevelFromExperience(val, _pp);
+}
+
+bool Skill::IsMaxed()
+{
+	// Skill is trained and at max level for trained skills. >= is just in case something (like a bug) could make _level_from_pp above expected max.
+	if (_sac == TRAINED_SKILL_ADVANCEMENT_CLASS && _level_from_pp >= ExperienceSystem::GetMaxTrainedSkillLevel())
+	{
+		return true;
+	}
+
+	// Skill is specialized and at max level for specialized skills
+	if (_sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS && _level_from_pp >= ExperienceSystem::GetMaxSpecializedSkillLevel())
+	{
+		return true;
+	}
+
+	// Is untrained/undef, or otherwise not maxed in level
+	return false;
+}
+
+DWORD Skill::GetMaxXP()
+{
+	DWORD maxSkillLevel = 0;
+
+	if (_sac == TRAINED_SKILL_ADVANCEMENT_CLASS)
+	{
+		maxSkillLevel = ExperienceSystem::GetMaxTrainedSkillLevel();
+	}
+	else if (_sac == SPECIALIZED_SKILL_ADVANCEMENT_CLASS)
+	{
+		maxSkillLevel = ExperienceSystem::GetMaxSpecializedSkillLevel();
+	}
+	else
+	{
+		return UINT_MAX;
+	}
+
+	return ExperienceSystem::ExperienceToSkillLevel(_sac, maxSkillLevel);
+}
+
+DWORD Skill::GetXpNeededForMaxXp()
+{
+	const DWORD currentSkillXp = _pp;
+
+	const DWORD maxSkillXp = GetMaxXP();
+
+	const DWORD amountNeededForMaxXp = maxSkillXp - currentSkillXp;
+
+	return amountNeededForMaxXp;
 }
 
 DEFINE_UNPACK(SpellBookPage)
@@ -3847,6 +3918,15 @@ void CSpellBook::ClearSpells()
 
 CBaseQualities::CBaseQualities()
 {
+	// Initialise - might prevent some crashes?
+	m_IntStats = new PackableHashTableWithJson<STypeInt, int>();
+	m_Int64Stats = new PackableHashTableWithJson<STypeInt64, __int64>();
+	m_BoolStats = new PackableHashTableWithJson<STypeBool, BOOL>();
+	m_FloatStats = new PackableHashTableWithJson<STypeFloat, double>();
+	m_StringStats = new PackableHashTableWithJson<STypeString, std::string>();
+	m_DIDStats = new PackableHashTableWithJson<STypeDID, DWORD>();
+	m_IIDStats = new PackableHashTableWithJson<STypeIID, DWORD>();
+	m_PositionStats = new PackableHashTableWithJson<STypePosition, Position>();
 }
 
 CBaseQualities::~CBaseQualities()
@@ -3871,7 +3951,7 @@ DEFINE_UNPACK(CBaseQualities)
 	Clear();
 
 	DWORD contentFlags = pReader->Read<DWORD>();
-	m_WeenieType = (ITEM_TYPE) pReader->Read<int>();
+	m_WeenieType = (ITEM_TYPE)pReader->Read<int>();
 
 	if (contentFlags & 1)
 	{
@@ -4043,7 +4123,7 @@ DEFINE_UNPACK_JSON(CBaseQualities)
 {
 	Clear();
 
-	m_WeenieType = (ITEM_TYPE) (int) reader["weenieType"];
+	m_WeenieType = (ITEM_TYPE)(int)reader["weenieType"];
 
 	if (reader.find("intStats") != reader.end())
 	{
@@ -4393,7 +4473,11 @@ BOOL CBaseQualities::InqDataID(STypeDID key, DWORD &value)
 {
 	if (m_DIDStats)
 	{
+		DEBUG_DATA << "InqDataID asking for " << key;
+
 		const DWORD *pValue = m_DIDStats->lookup(key);
+
+		DEBUG_DATA << "InqDataID lookup done!";
 
 		if (pValue)
 		{
@@ -4520,6 +4604,11 @@ std::string CBaseQualities::GetString(STypeString key, std::string defaultValue)
 DWORD CBaseQualities::GetDID(STypeDID key, DWORD defaultValue)
 {
 	DWORD value = defaultValue;
+
+
+	DEBUG_DATA << "InqDataID (Qualities.cpp:4538): " << key << " " << defaultValue << "... ";
+
+
 	InqDataID(key, value);
 	return value;
 }
@@ -4555,7 +4644,7 @@ DEFINE_UNPACK(CACQualities)
 		return false;
 
 	DWORD contentFlags = pReader->Read<DWORD>();
-	
+
 	SetID(pReader->Read<DWORD>()); // WCID
 
 	if (contentFlags & 1)
@@ -5150,23 +5239,23 @@ BOOL CACQualities::BoundsCheck(STypeAttribute2nd key, DWORD &val, DWORD &max)
 	case HEALTH_ATTRIBUTE_2ND:
 	case STAMINA_ATTRIBUTE_2ND:
 	case MANA_ATTRIBUTE_2ND:
+	{
+		if (val < 0)
 		{
-			if (val < 0)
-			{
-				val = 0;
-				return TRUE;
-			}
-
-			if (InqAttribute2nd((STypeAttribute2nd)(int)(key - 1), max, FALSE))
-			{
-				if (val > max)
-					val = max;
-
-				return TRUE;
-			}
-
-			return FALSE;
+			val = 0;
+			return TRUE;
 		}
+
+		if (InqAttribute2nd((STypeAttribute2nd)(int)(key - 1), max, FALSE))
+		{
+			if (val > max)
+				val = max;
+
+			return TRUE;
+		}
+
+		return FALSE;
+	}
 	}
 
 	return TRUE;
@@ -5220,7 +5309,7 @@ BOOL CACQualities::SetAttribute2nd(STypeAttribute2nd key, const SecondaryAttribu
 
 		if (newValue._current > maxValue)
 			newValue._current = maxValue;
-		
+
 		break;
 	}
 
@@ -5240,7 +5329,7 @@ BOOL CACQualities::InqAttribute2nd(STypeAttribute2nd key, SecondaryAttribute &va
 BOOL CACQualities::InqAttribute2ndBaseLevel(STypeAttribute2nd key, DWORD &value, BOOL raw)
 {
 	Attribute2ndTable *pTable = CachedAttribute2ndTable; // Attribute2ndTable::Get(0x0E000003);
-	
+
 	Attribute2ndBase *base = NULL;
 
 	switch (key)
@@ -5295,7 +5384,7 @@ BOOL CACQualities::InqAttribute2nd(STypeAttribute2nd key, DWORD &value, BOOL raw
 	{
 		int gearHealth = 0;
 		if (InqInt(GEAR_MAX_HEALTH_INT, gearHealth, FALSE, FALSE))
-			baseLevel += (unsigned) gearHealth;
+			baseLevel += (unsigned)gearHealth;
 	}
 
 	if (_attribCache && _attribCache->InqAttribute2nd(key, value))
@@ -5336,6 +5425,7 @@ BOOL CACQualities::EnchantSkill(STypeSkill key, DWORD &value)
 
 BOOL CACQualities::InqSkill(STypeSkill key, DWORD &value, BOOL raw)
 {
+
 	if (!InqSkillBaseLevel(key, value, raw))
 		return FALSE;
 
@@ -5411,6 +5501,7 @@ BOOL CACQualities::InqSkill(STypeSkill key, DWORD &value, BOOL raw)
 
 BOOL CACQualities::InqSkill(STypeSkill key, Skill &value)
 {
+	
 	if (_skillStatsTable)
 	{
 		const Skill *pValue = _skillStatsTable->lookup(key);
@@ -5690,7 +5781,7 @@ void CACQualities::AddSpell(DWORD spellid)
 	{
 		_spell_book = new CSpellBook();
 	}
-	
+
 	SpellBookPage page;
 	page._casting_likelihood = 0;
 	_spell_book->AddSpell(spellid, page);
@@ -5743,7 +5834,7 @@ BOOL CACQualities::InqJumpVelocity(float extent, float &v_z)
 			int val = 0;
 			if (InqInt(AUGMENTATION_JACK_OF_ALL_TRADES_INT, val) && val > 0)
 				jumpskill += 5;
-			
+
 			int key = 0;
 			InqInt(LUM_AUG_SKILLED_SPEC_INT, key);
 
@@ -5789,7 +5880,7 @@ BOOL CACQualities::InqRunRate(float &rate)
 	if (!InqSkill(RUN_SKILL, runskill, FALSE))
 		return FALSE;
 
-	rate = MovementSystem::GetRunRate(burden, runskill, 1.0f);	
+	rate = MovementSystem::GetRunRate(burden, runskill, 1.0f);
 	return TRUE;
 }
 
@@ -5849,7 +5940,7 @@ void AttributeCache::CopyFrom(AttributeCache *pOther)
 {
 	Clear();
 
-	if (pOther->_strength) 
+	if (pOther->_strength)
 	{
 		_strength = new Attribute();
 		*_strength = *pOther->_strength;
@@ -5899,45 +5990,46 @@ void AttributeCache::CopyFrom(AttributeCache *pOther)
 /*
 STypeInt IntStatKeyEnumUnPacker(const std::string &key)
 {
-	static std::unordered_map<std::string, STypeInt> stats( 
-	{
-		{ "test1", STypeInt::UNDEF_INT },
-		{ "test2", STypeInt::LEVEL_INT }
-	}
-	);
+static std::unordered_map<std::string, STypeInt> stats(
+{
+{ "test1", STypeInt::UNDEF_INT },
+{ "test2", STypeInt::LEVEL_INT }
+}
+);
 
-	auto entry = stats.find(key);
+auto entry = stats.find(key);
 
-	if (entry != stats.end())
-		return entry->second;
+if (entry != stats.end())
+return entry->second;
 
-	return (STypeInt) atoi(key.c_str());
+return (STypeInt) atoi(key.c_str());
 }
 
 std::string IntStatKeyEnumPacker(const STypeInt &key)
 {
-	static std::unordered_map<STypeInt, std::string> stats(
-	{
-		{ STypeInt::UNDEF_INT, "test1" },
-		{ STypeInt::LEVEL_INT, "test2" }
-	}
-	);
+static std::unordered_map<STypeInt, std::string> stats(
+{
+{ STypeInt::UNDEF_INT, "test1" },
+{ STypeInt::LEVEL_INT, "test2" }
+}
+);
 
-	auto entry = stats.find(key);
+auto entry = stats.find(key);
 
-	if (entry != stats.end())
-		return entry->second;
+if (entry != stats.end())
+return entry->second;
 
-	char numStr[32];
-	_itoa((int)key, numStr, 10);
+char numStr[32];
+_itoa((int)key, numStr, 10);
 
-	return std::string(numStr);
+return std::string(numStr);
 }
 */
 
 void CBaseQualities::CopyFrom(CBaseQualities *pOther)
 {
 	Clear();
+	DEBUG_DATA << "CopyFrom (Qualities.cpp: 5970)" << pOther->GetString(NAME_STRING, "") << " Starting";
 
 	m_WeenieType = pOther->m_WeenieType;
 
@@ -5966,7 +6058,7 @@ void CBaseQualities::CopyFrom(CBaseQualities *pOther)
 	{
 		m_StringStats = new PackableHashTableWithJson<STypeString, std::string>();
 		*m_StringStats = *pOther->m_StringStats;
-	}	
+	}
 	if (pOther->m_DIDStats)
 	{
 		m_DIDStats = new PackableHashTableWithJson<STypeDID, DWORD>();
@@ -5982,6 +6074,8 @@ void CBaseQualities::CopyFrom(CBaseQualities *pOther)
 		m_PositionStats = new PackableHashTableWithJson<STypePosition, Position>();
 		*m_PositionStats = *pOther->m_PositionStats;
 	}
+
+	DEBUG_DATA << "CopyFrom (Qualities.cpp: 5970)" << pOther->GetString(NAME_STRING, "") << " Ending";
 }
 
 void CACQualities::CopyFrom(CACQualities *pOther)
@@ -6012,7 +6106,7 @@ void CACQualities::CopyFrom(CACQualities *pOther)
 			BinaryReader r(w.GetData(), w.GetSize()); \
 			varName->UnPack(&r); \
 		}
-	
+
 	COPY_BY_PACKING_SLOW(Body, _body);
 
 	if (pOther->_spell_book)
@@ -6020,7 +6114,7 @@ void CACQualities::CopyFrom(CACQualities *pOther)
 		_spell_book = new CSpellBook();
 		*_spell_book = *pOther->_spell_book;
 	}
-	
+
 	COPY_BY_PACKING_SLOW(CEnchantmentRegistry, _enchantment_reg);
 	COPY_BY_PACKING_SLOW(EventFilter, _event_filter);
 	COPY_BY_PACKING_SLOW(CEmoteTable, _emote_table);
@@ -6102,7 +6196,7 @@ BOOL CEnchantmentRegistry::GetFloatEnchantmentDetails(unsigned int stype, Enchan
 		return FALSE;
 	if (!filter->QueryFloat(stype))
 		return TRUE;
-	
+
 	PackableListWithJson<Enchantment> affecting;
 	CullEnchantmentsFromList(_mult_list, Float_EnchantmentType, stype, &affecting);
 	CullEnchantmentsFromList(_add_list, Float_EnchantmentType, stype, &affecting);
@@ -6146,7 +6240,7 @@ BOOL CACQualities::GetBodyArmorEnchantmentDetails(unsigned int part, DAMAGE_TYPE
 		tryEnchanting = true;
 
 	int baseArmor1 = 0;
-	if(tryEnchanting)
+	if (tryEnchanting)
 		_enchantment_reg->GetBodyArmorEnchantmentDetails(part, DAMAGE_TYPE::UNDEF_DAMAGE_TYPE, val);
 
 	if (!_body)
@@ -6220,7 +6314,6 @@ BOOL CACQualities::GetBodyArmorEnchantmentDetails(unsigned int part, DAMAGE_TYPE
 				val->rawValue = pPart->_acache._armor_vs_pierce;
 				if (tryEnchanting)
 					_enchantment_reg->GetBodyArmorEnchantmentDetails(part, dt, val);
-
 				if (bAddBaseArmor)
 					val->rawValue += baseArmor;
 

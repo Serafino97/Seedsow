@@ -2,6 +2,7 @@
 #include "StdAfx.h"
 #include "PhatSDK.h"
 #include "CombatFormulas.h"
+#include "fastrand.h"
 
 double GetImbueMultiplier(double currentSkill, double minEffectivenessSkill, double maxEffectivenessSkill, double maxMultiplier, bool allowNegative)
 {
@@ -23,6 +24,7 @@ void CalculateDamage(DamageEventData *dmgEvent, SpellCastData *spellData)
 	if (!dmgEvent->source)
 		return;
 
+	CalculateRendingAndMiscData(dmgEvent);
 	CalculateAttributeDamageBonus(dmgEvent);
 	CalculateSkillDamageBonus(dmgEvent, spellData);
 	CalculateCriticalHitData(dmgEvent, spellData);
@@ -34,9 +36,19 @@ void CalculateDamage(DamageEventData *dmgEvent, SpellCastData *spellData)
 	damageCalc += dmgEvent->skillDamageBonus;
 	damageCalc += dmgEvent->slayerDamageBonus;
 
-	dmgEvent->wasCrit = (Random::GenFloat(0.0, 1.0) < dmgEvent->critChance) ? true : false;
+	dmgEvent->wasCrit = (FastRNG.NextDouble() < dmgEvent->critChance) ? true : false;
 	if (dmgEvent->wasCrit)
-		damageCalc += damageCalc * dmgEvent->critMultiplier;
+	{
+		damageCalc += damageCalc * dmgEvent->critMultiplier; //Leave the old formula for Melee/Missile crits.
+
+		if (dmgEvent->damage_form == DF_MAGIC) //Multiply base spell damage by the critMultiplier before adding skill and slayer damage bonuses for Magic.
+		{
+			damageCalc = dmgEvent->baseDamage;
+			damageCalc += damageCalc * dmgEvent->critMultiplier;
+			damageCalc += dmgEvent->skillDamageBonus;
+			damageCalc += dmgEvent->slayerDamageBonus;
+		}
+	}
 
 	if (dmgEvent->damage_form == DF_MAGIC && !dmgEvent->source->AsPlayer())
 		damageCalc /= 2; //creatures do half magic damage. Unconfirmed but feels right. Should this be projectile spells only?
@@ -104,7 +116,13 @@ void CalculateSkillDamageBonus(DamageEventData *dmgEvent, SpellCastData *spellDa
 			{
 				float minDamage = (float)meta->_baseIntensity;
 
-				float skillDamageMod = ((int)spellData->current_skill - (spellData->spell->_power + 50)) / 250.0; //made up formula.
+				float difficulty = spellData->spell->_power - 100; // add fudge factor
+				if (spellData->spell->_power == 400)
+				{
+					difficulty -= 75; // Adjust for level 8s
+				}
+
+				float skillDamageMod = ((int)spellData->current_skill - difficulty) / 1000.0; //better made up formula.
 				if (skillDamageMod > 0)
 					dmgEvent->skillDamageBonus = minDamage * skillDamageMod;
 			}
@@ -135,8 +153,11 @@ void CalculateCriticalHitData(DamageEventData *dmgEvent, SpellCastData *spellDat
 
 		imbueEffects = dmgEvent->weapon->GetImbueEffects();
 
-		dmgEvent->critChance += (dmgEvent->critChance * dmgEvent->weapon->GetBitingStrikeFrequency());
-		dmgEvent->critMultiplier += dmgEvent->weapon->GetCrushingBlowMultiplier();
+		if (dmgEvent->weapon->GetBitingStrikeFrequency())
+			dmgEvent->critChance = dmgEvent->weapon->GetBitingStrikeFrequency();
+
+		if (dmgEvent->weapon->GetCrushingBlowMultiplier())
+			dmgEvent->critMultiplier += dmgEvent->weapon->GetCrushingBlowMultiplier();
 
 		if (imbueEffects & CriticalStrike_ImbuedEffectType)
 			dmgEvent->critChance += GetImbueMultiplier(dmgEvent->attackSkillLevel, 150, 400, 0.5);
@@ -156,8 +177,11 @@ void CalculateCriticalHitData(DamageEventData *dmgEvent, SpellCastData *spellDat
 
 		imbueEffects = dmgEvent->weapon->GetImbueEffects();
 
-		dmgEvent->critChance += (dmgEvent->critChance * dmgEvent->weapon->GetBitingStrikeFrequency());
-		dmgEvent->critMultiplier += dmgEvent->weapon->GetCrushingBlowMultiplier();
+		if (dmgEvent->weapon->GetBitingStrikeFrequency())
+			dmgEvent->critChance = dmgEvent->weapon->GetBitingStrikeFrequency();
+
+		if (dmgEvent->weapon->GetCrushingBlowMultiplier())
+			dmgEvent->critMultiplier += dmgEvent->weapon->GetCrushingBlowMultiplier();
 
 		if (imbueEffects & CriticalStrike_ImbuedEffectType)
 			dmgEvent->critChance += GetImbueMultiplier(dmgEvent->attackSkillLevel, 125, 360, 0.5);
@@ -178,6 +202,12 @@ void CalculateCriticalHitData(DamageEventData *dmgEvent, SpellCastData *spellDat
 			return;
 
 		imbueEffects = dmgEvent->weapon->GetImbueEffects();
+
+		if (dmgEvent->weapon->GetBitingStrikeFrequency())
+			dmgEvent->critChance = dmgEvent->weapon->GetBitingStrikeFrequency();
+
+		if (dmgEvent->weapon->GetCrushingBlowMultiplier())
+			dmgEvent->critMultiplier += dmgEvent->weapon->GetCrushingBlowMultiplier();
 
 		if (dmgEvent->attackSkill == WAR_MAGIC_SKILL)
 		{
@@ -204,7 +234,7 @@ void CalculateCriticalHitData(DamageEventData *dmgEvent, SpellCastData *spellDat
 				//PvP: Crippling Blow for War Magic currently scales from adding 50 % of the spells damage on critical hits 
 				//to adding 100 % at maximum effectiveness
 				if (isPvP)
-					dmgEvent->critMultiplier += GetImbueMultiplier(dmgEvent->attackSkillLevel, 150, 400, 1.0);
+					dmgEvent->critMultiplier += GetImbueMultiplier(dmgEvent->attackSkillLevel, 150, 400, 0.5);
 				else
 					dmgEvent->critMultiplier += GetImbueMultiplier(dmgEvent->attackSkillLevel, 125, 360, 5.0);
 			}
@@ -305,6 +335,9 @@ void CalculateRendingAndMiscData(DamageEventData *dmgEvent)
 			dmgEvent->rendingMultiplier = max(GetImbueMultiplier(dmgEvent->attackSkillLevel, 0, 400, 2.5), 1.0f);
 			break;
 		case DF_MISSILE:
+
+			dmgEvent->rendingMultiplier = max(0.25 + GetImbueMultiplier(dmgEvent->attackSkillLevel, 0, 360, 2.25), 1.0f);
+			break;
 		case DF_MAGIC:
 			dmgEvent->rendingMultiplier = max(0.25 + GetImbueMultiplier(dmgEvent->attackSkillLevel, 0, 360, 2.25), 1.0f);
 			break;

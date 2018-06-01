@@ -22,6 +22,7 @@
 #include "Healer.h"
 #include "House.h"
 #include "Scroll.h"
+#include "ManaStone.h"
 #include "MeleeWeapon.h"
 #include "Missile.h"
 #include "MissileLauncher.h"
@@ -35,6 +36,8 @@
 #include "SkillAlterationDevice.h"
 #include "GameEventManager.h"
 #include "TreasureFactory.h"
+#include "AugmentationDevice.h"
+#include "fastrand.h"
 
 CWeenieFactory::CWeenieFactory()
 {
@@ -73,6 +76,8 @@ DWORD CWeenieFactory::GetScrollSpellForWCID(DWORD wcid)
 		if (defaults->m_Qualities.m_WeenieType == Scroll_WeenieType)
 		{
 			DWORD spell_id = 0;
+			DEBUG_DATA << "InqDataID (WeenieFactory.cpp:80): " << defaults->m_WCID << " " << defaults->m_Description;
+
 			if (defaults->m_Qualities.InqDataID(SPELL_DID, spell_id))
 			{
 				return spell_id;
@@ -103,6 +108,8 @@ void CWeenieFactory::MapScrollWCIDs()
 		}
 
 		DWORD spell_id;
+		DEBUG_DATA << "InqDataID (WeenieFactory.cpp:114): " << entry.second->m_WCID << " " << entry.second->m_Description << "... ";
+
 		if (entry.second->m_Qualities.InqDataID(SPELL_DID, spell_id))
 		{
 			m_ScrollWeenies[spell_id] = entry.first;
@@ -117,6 +124,8 @@ std::list<DWORD> CWeenieFactory::GetWCIDsWithMotionTable(DWORD mtable)
 	for (auto &entry : m_WeenieDefaults)
 	{
 		DWORD mid = 0;
+		DEBUG_DATA << "InqDataID (WeenieFactory.cpp:114): " << entry.second->m_WCID << " " << entry.second->m_Description << "... ";
+
 		if (entry.second->m_Qualities.InqDataID(MOTION_TABLE_DID, mid))
 		{
 			if (mtable == mid)
@@ -524,7 +533,7 @@ void CWeenieFactory::LoadLocalStorageIndexed()
 				{
 					if (bDuplicate)
 					{
-						LOG(Data, Warning, "Duplicate WCID %d, ignoring due to \"%s\"\n", pDefaults->m_WCID, m_WeenieDefaults[pDefaults->m_WCID]->m_sourceFile.c_str());
+						SERVER_ERROR << "Duplicate WCID" << pDefaults->m_WCID << ", ignoring due to" << m_WeenieDefaults[pDefaults->m_WCID]->m_sourceFile.c_str();
 					}
 
 					delete pDefaults;
@@ -532,7 +541,7 @@ void CWeenieFactory::LoadLocalStorageIndexed()
 			}
 			else
 			{
-				LOG(Data, Warning, "Error parsing weenie defaults file\n");
+				SERVER_ERROR << "Error parsing weenie defaults file";
 				delete pDefaults;
 			}
 		}
@@ -770,6 +779,11 @@ CWeenieObject *CWeenieFactory::CreateBaseWeenieByType(int weenieType, unsigned i
 		}
 
 	case ManaStone_WeenieType:
+		{
+			weenie = new CManaStoneWeenie();
+			break;
+		}
+
 	case Coin_WeenieType:
 		{
 			weenie = new CWeenieObject();
@@ -848,6 +862,11 @@ CWeenieObject *CWeenieFactory::CreateBaseWeenieByType(int weenieType, unsigned i
 	case Storage_WeenieType:
 		{
 			weenie = new CStorageWeenie();
+			break;
+		}
+	case AugmentationDevice_WeenieType:
+		{
+			weenie = new CAugmentationDeviceWeenie();
 			break;
 		}
 
@@ -959,7 +978,7 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 		weenie->SetInitialPosition(pos);
 		if (!g_pWorld->CreateEntity(weenie))
 		{
-			LOG(Temp, Normal, TEXT("Failed creating generated spawn %s.\n"), GetWCIDName(profile->type));
+			SERVER_ERROR << "Failed creating generated spawn" << GetWCIDName(profile->type);
 			return;
 		}
 		break;
@@ -969,8 +988,8 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 		{
 			// outdoors
 			double genRadius = parent->InqFloatQuality(GENERATOR_RADIUS_FLOAT, 0.0f);
-			double random_x = Random::GenFloat(-genRadius, genRadius);
-			double random_y = Random::GenFloat(-genRadius, genRadius);
+			double random_x = FastRNG.NextDouble(-genRadius, genRadius);
+			double random_y = FastRNG.NextDouble(-genRadius, genRadius);
 
 			pos.frame.m_origin += Vector(random_x, random_y, 0.0f);
 			pos.frame.m_origin.z = CalcSurfaceZ(pos.objcell_id, pos.frame.m_origin.x, pos.frame.m_origin.y, false);
@@ -983,15 +1002,15 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 		else
 		{
 			double genRadius = parent->InqFloatQuality(GENERATOR_RADIUS_FLOAT, 0.0f);
-			double random_x = Random::GenFloat(-genRadius, genRadius);
-			double random_y = Random::GenFloat(-genRadius, genRadius);
+			double random_x = FastRNG.NextDouble(-genRadius, genRadius);
+			double random_y = FastRNG.NextDouble(-genRadius, genRadius);
 			pos.frame.m_origin += Vector(random_x, random_y, 0.0f);
 		}
 
 		weenie->SetInitialPosition(pos);
 		if (!g_pWorld->CreateEntity(weenie))
 		{
-			LOG(Temp, Normal, TEXT("Failed creating generated spawn %s.\n"), GetWCIDName(profile->type));
+			SERVER_ERROR << "Failed creating generated spawn" << GetWCIDName(profile->type);
 			return;
 		}
 		break;
@@ -1008,7 +1027,7 @@ void CWeenieFactory::AddWeenieToDestination(CWeenieObject *weenie, CWeenieObject
 		weenie->SetInitialPosition(pos);
 		if (!g_pWorld->CreateEntity(weenie))
 		{
-			LOG(Temp, Normal, TEXT("Failed creating generated spawn %s.\n"), GetWCIDName(profile->type));
+			SERVER_ERROR << "Failed creating generated spawn" << GetWCIDName(profile->type);
 			return;
 		}
 		break;
@@ -1085,7 +1104,7 @@ int CWeenieFactory::AddFromCreateList(CWeenieObject *parent, PackableListWithJso
 				// We've reached the end of this set.
 				seekingNext = false;
 				forceNext = false;
-				diceRoll = Random::RollDice(0.0, 1.0);
+				diceRoll = FastRNG.NextDouble();
 				accumulatedChance = 0.0;
 			}
 			else
@@ -1204,7 +1223,7 @@ int CWeenieFactory::AddFromGeneratorTable(CWeenieObject *parent, bool isInit)
 
 	while (numSpawned < maxSpawns)
 	{
-		float diceRoll = Random::RollDice(0.0f, 1.0f);
+		float diceRoll = FastRNG.NextDouble();
 
 		bool fullLoopWithNoValidEntries = true;
 		for (GeneratorProfile &entry : genList)

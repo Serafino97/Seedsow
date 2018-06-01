@@ -2,6 +2,7 @@
 #pragma once
 
 #include "crcwheel.h"
+#include "fastrand.h"
 
 class FragmentStack;
 
@@ -27,7 +28,7 @@ struct EventHeader
 class COutgoingNetMessage
 {
 public:
-	BYTE *data;
+	BYTE * data;
 	DWORD length;
 	WORD group_id;
 };
@@ -43,7 +44,7 @@ public:
 	void Think(); //Generic work cycle.
 	void ThinkInbound();
 	void ThinkOutbound();
-	
+
 	void IncomingBlob(BlobPacket_s *blob, double recvTime);
 
 	DWORD GetNextSequence();;
@@ -53,7 +54,7 @@ public:
 	DWORD GetClientCryptoSeed() { return m_in.crypto_seed; }
 	DWORD GetServerCryptoSeed() { return m_out.crypto_seed; }
 
-// private:
+	// private:
 	WORD GetElapsedTime();
 
 	void Cleanup();
@@ -86,7 +87,7 @@ public:
 			activesequence = 1;
 			flushsequence = 0;
 
-			crypto_seed = Random::GenUInt(0x10000000, 0x70000000);
+			crypto_seed = FastRNG.NextUInt(0x10000000, 0x70000000);
 			crypto = AllocCrypto(crypto_seed);
 		}
 
@@ -99,12 +100,12 @@ public:
 		double lastactivity; // When the last SUCCESSFUL packet received.
 		double lastrequest;	//When the last lost packets request was made.
 
-		//Sequencing.
+							//Sequencing.
 		DWORD sequence; //The blob counter. The last one we know the client sent.
 		DWORD activesequence; //The blob counter. The last sequence we processed.
 		DWORD flushsequence;	//The last sequence the client processed.
 
-		//CRC
+								//CRC
 		void *crypto;
 		DWORD crypto_seed;
 
@@ -136,7 +137,7 @@ public:
 
 			initchars = FALSE;
 
-			crypto_seed = Random::GenUInt(0x10000000, 0x70000000);
+			crypto_seed = FastRNG.NextUInt(0x10000000, 0x70000000);
 			crypto = AllocCrypto(crypto_seed);
 		}
 
@@ -158,7 +159,7 @@ public:
 		DWORD fragment_counter;	//The fragment counter.
 		DWORD event_counter; //The game event counter.
 
-		//CRC
+							 //CRC
 		void *crypto;
 		DWORD crypto_seed;
 

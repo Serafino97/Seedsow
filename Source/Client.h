@@ -68,6 +68,7 @@ private:
 
 	//
 	BOOL CheckNameValidity(const char *name, int access, std::string &resultName);
+	BOOL CheckBadName(const std::string name);
 
 	// This is a dumbly separated way of parsing methods. Change this.
 	CClientEvents *m_pEvents;

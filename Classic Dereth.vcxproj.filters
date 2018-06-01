@@ -588,6 +588,24 @@
     <ClCompile Include="Source\BindStone.cpp">
       <Filter>Source Files\Objects\Weenie Types</Filter>
     </ClCompile>
+    <ClCompile Include="Source\easylogging++.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\EnumUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PhatSDK\Support\fastrand.cpp">
+      <Filter>PhatSDK\Support</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TradeManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AugmentationDevice.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ManaStone.cpp">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\crcwheel.h">
@@ -1192,6 +1210,24 @@
     </ClInclude>
     <ClInclude Include="Lib\zlib\zlib.h">
       <Filter>Source Files\ZLib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\easylogging++.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EnumUtil.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PhatSDK\Support\fastrand.h">
+      <Filter>PhatSDK\Support</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TradeManager.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\AugmentationDevice.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ManaStone.h">
+      <Filter>Source Files\Objects\Weenie Types</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

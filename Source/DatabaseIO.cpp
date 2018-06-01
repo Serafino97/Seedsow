@@ -3,6 +3,7 @@
 #include "Database2.h"
 #include "DatabaseIO.h"
 #include "SHA512.h"
+#include "fastrand.h"
 
 DWORD64 g_RandomAdminPassword = 0; // this is used for the admin login
 
@@ -13,7 +14,7 @@ CDatabaseIO::CDatabaseIO()
 
 CDatabaseIO::~CDatabaseIO()
 {
-	SafeDeleteArray (blob_query_buffer);
+	SafeDeleteArray(blob_query_buffer);
 }
 
 bool CDatabaseIO::VerifyAccount(const char *username, const char *password, AccountInformation_t *pAccountInfo, int *pError)
@@ -148,7 +149,7 @@ bool CDatabaseIO::CreateAccount(const char *username, const char *password, int 
 	std::string ipaddressEscaped = g_pDB2->EscapeString(ipaddress);
 
 	// Create random salt
-	DWORD randomValue = Random::GenUInt(0, 100000);
+	DWORD randomValue = FastRNG.NextUInt(0, 100000);
 	std::string passwordSalt = SHA512(&randomValue, sizeof(randomValue)).substr(0, 16);
 
 	// Apply salt
@@ -266,7 +267,7 @@ unsigned int CDatabaseIO::GetHighestWeenieID(unsigned int min_range, unsigned in
 		}
 	}
 
-	LOG(Database, Error, "Could not get highest weenie ID for range 0x%08X - 0x%08X, returning 0x%08X.\n", min_range, max_range, min_range);
+	SERVER_ERROR << "Could not get highest weenie ID for range" << min_range << "-" << max_range << ", returning" << min_range;
 	return result;
 }
 
@@ -342,8 +343,8 @@ std::string CDatabaseIO::GetPlayerCharacterName(DWORD weenie_id)
 /*
 bool CDatabaseIO::CreateOrUpdateWeenie(unsigned int weenie_id, unsigned int top_level_object_id, unsigned int block_id, void *data, unsigned int data_length)
 {
-	// synchronous, deprecated
-	return CreateOrUpdateWeenie((MYSQL *)g_pDB2->GetInternalConnection(), weenie_id, top_level_object_id, block_id, data, data_length);
+// synchronous, deprecated
+return CreateOrUpdateWeenie((MYSQL *)g_pDB2->GetInternalConnection(), weenie_id, top_level_object_id, block_id, data, data_length);
 }
 */
 
@@ -367,7 +368,7 @@ bool CDatabaseIO::GetWeenie(unsigned int weenie_id, unsigned int *top_level_obje
 	MYSQL_STMT *statement = mysql_stmt_init(sql);
 
 	const char *query_string = csprintf("SELECT top_level_object_id, block_id, data FROM weenies WHERE id = %u", weenie_id);
-	mysql_stmt_prepare(statement, query_string, (unsigned long) strlen(query_string));
+	mysql_stmt_prepare(statement, query_string, (unsigned long)strlen(query_string));
 
 	MYSQL_BIND binding[3];
 	memset(binding, 0, sizeof(binding));
@@ -376,7 +377,7 @@ bool CDatabaseIO::GetWeenie(unsigned int weenie_id, unsigned int *top_level_obje
 	binding[0].buffer_length = sizeof(unsigned int);
 	binding[0].buffer_type = MYSQL_TYPE_LONG;
 	binding[0].is_unsigned = true;
-	
+
 	binding[1].buffer = block_id;
 	binding[1].buffer_length = sizeof(unsigned int);
 	binding[1].buffer_type = MYSQL_TYPE_LONG;
@@ -391,14 +392,14 @@ bool CDatabaseIO::GetWeenie(unsigned int weenie_id, unsigned int *top_level_obje
 
 	if (mysql_stmt_execute(statement) || mysql_stmt_store_result(statement))
 	{
-		LOG(Database, Error, "Error on GetWeenie: %s\n", mysql_error(sql));
+		SERVER_ERROR << "Error on GetWeenie:" << mysql_error(sql);
 		mysql_stmt_close(statement);
 		return false;
 	}
 
 	if (mysql_stmt_fetch(statement))
 	{
-		LOG(Database, Warning, "GetWeenie failed because weenie 0x%08X doesn't exist!\n%s\n", weenie_id, query_string);
+		SERVER_WARN << "GetWeenie failed because weenie" << weenie_id << "doesn't exist!\n%s\n";
 
 		mysql_stmt_free_result(statement);
 		mysql_stmt_close(statement);
@@ -454,7 +455,7 @@ bool CDatabaseIO::CreateOrUpdateGlobalData(DBIOGlobalDataID id, void *data, unsi
 	bool bErrored = false;
 	if (mysql_stmt_execute(statement))
 	{
-		LOG(Database, Error, "Error on CreateOrUpdateGlobalData for 0x%08X: %s\n", id, mysql_error(sql));
+		SERVER_ERROR << "Error on CreateOrUpdateGlobalData for" << id << ":" << mysql_error(sql);
 		bErrored = true;
 	}
 
@@ -485,14 +486,14 @@ bool CDatabaseIO::GetGlobalData(DBIOGlobalDataID id, void **data, unsigned long 
 
 	if (mysql_stmt_execute(statement) || mysql_stmt_store_result(statement))
 	{
-		LOG(Database, Error, "Error on GetGlobalData: %s\n", mysql_error(sql));
+		SERVER_ERROR << "Error on GetGlobalData:" << mysql_error(sql);
 		mysql_stmt_close(statement);
 		return false;
 	}
 
 	if (mysql_stmt_fetch(statement))
 	{
-		LOG(Database, Verbose, "GetGlobalData failed because id 0x%08X doesn't exist!\n%s\n", id, query_string);
+		DEBUG_DATA << "GetGlobalData failed because id" << id << "doesn't exist!\n" << query_string;
 
 		mysql_stmt_free_result(statement);
 		mysql_stmt_close(statement);
@@ -540,7 +541,7 @@ bool CDatabaseIO::GetHouseData(unsigned int house_id, void **data, unsigned long
 
 	if (mysql_stmt_execute(statement) || mysql_stmt_store_result(statement))
 	{
-		LOG(Database, Error, "Error on GetHouseData: %s\n", mysql_error(sql));
+		SERVER_ERROR << "Error on GetHouseData:" << mysql_error(sql);
 		mysql_stmt_close(statement);
 		return false;
 	}
@@ -599,7 +600,7 @@ DWORD CDatabaseIO::GetNumPendingSaves(DWORD weenie_id)
 {
 	_pendingSavesLock.Lock();
 	std::unordered_map<DWORD, DWORD>::iterator i = _pendingSaves.find(weenie_id);
-	
+
 	DWORD numSaves = 0;
 	if (i != _pendingSaves.end())
 	{

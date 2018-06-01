@@ -60,8 +60,13 @@ public:
 	static DWORD Attribute2ndLevelFromExperience(DWORD exp);
 	static DWORD SkillLevelFromExperience(SKILL_ADVANCEMENT_CLASS sac, DWORD exp);
 	static DWORD ExperienceToSkillLevel(SKILL_ADVANCEMENT_CLASS sac, DWORD level);
+	static DWORD ExperienceToAttributeLevel(DWORD level);
+	static DWORD ExperienceToAttribute2ndLevel(DWORD level);
+
 	static DWORD GetMaxTrainedSkillLevel();
 	static DWORD GetMaxSpecializedSkillLevel();
+	static DWORD GetMaxAttributeLevel();
+	static DWORD GetMaxAttribute2ndLevel();
 
 	static DWORD64 ExperienceToLevel(unsigned int level);
 	static DWORD GetMaxLevel();

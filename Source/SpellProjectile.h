@@ -21,6 +21,8 @@ public:
 
 	virtual DWORD GetPhysicsTargetID() override { return m_TargetID; }
 
+	void makeLifeProjectile(int selfDrainedAmount, float selfDrainedDamageRatio);
+
 public:
 	DWORD m_SourceID;
 	DWORD m_TargetID;
