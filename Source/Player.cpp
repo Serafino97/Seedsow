@@ -3171,7 +3171,7 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 	//SALVAGING SKILL DETERMINES SALVAGE AMOUNT
 	DWORD salvagingSkillValue;
 	InqSkill(STypeSkill::SALVAGING_SKILL, salvagingSkillValue, false);
-
+	
 	DWORD highestTinkeringSkillValue;
 	DWORD tinkeringSkills[4];
 	InqSkill(STypeSkill::ARMOR_APPRAISAL_SKILL, tinkeringSkills[0], false);
@@ -3180,6 +3180,10 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 	InqSkill(STypeSkill::ITEM_APPRAISAL_SKILL, tinkeringSkills[3], false);
 
 	highestTinkeringSkillValue = max(max(max(tinkeringSkills[0], tinkeringSkills[1]), tinkeringSkills[2]), tinkeringSkills[3]);
+	
+	// Classic GDL seems to have no salvaging skill, therefore highestTinkeringsSkill = salvagingSkill
+	salvagingSkillValue = highestTinkeringSkillValue;
+	//SendText(csprintf("SalvageSkill: %d", salvagingSkillValue), LTT_DEFAULT);
 
 	int numAugs = max(0, min(4, InqIntQuality(AUGMENTATION_BONUS_SALVAGE_INT, 0)));
 
@@ -3242,6 +3246,7 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 
 			// formula taken from http://asheron.wikia.com/wiki/Salvaging/Value_Pre2013
 			int salvageValue = itemValue * ( salvagingSkillValue / 387.0 ) *(1 + numAugs * 0.25);
+			
 			salvageMap[material].totalValue += salvageValue;
 			salvageMap[material].amount += salvageAmount;
 			salvageMap[material].itemsSalvagedCountCont++;
