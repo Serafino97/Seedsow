@@ -281,7 +281,7 @@ void CClientEvents::LoginCharacter(DWORD char_weenie_id, const char *szAccount)
 	}
 
 	m_pPlayer->SendText("AC Classic GDL Server " SERVER_VERSION_NUMBER_STRING " " SERVER_VERSION_STRING, LTT_DEFAULT);
-	m_pPlayer->SendText("Maintained by Serafino", LTT_DEFAULT);
+	m_pPlayer->SendText("Maintained by Serafino, LawrencePW and Soladir! Contact us at https://discord.gg/GHKk4ck", LTT_DEFAULT);
 	m_pPlayer->SendText("Powered by GamesDeadLol. Not an official Asheron's Call server.", LTT_DEFAULT);
 
 	/*
