@@ -4,8 +4,10 @@
 #include "World.h"
 #include "Monster.h"
 #include "CombatFormulas.h"
+#include "Player.h"
+#include "fastrand.h"
 
-const float MAX_SPELL_PROJECTILE_LIFETIME = 60.0f;
+const float MAX_SPELL_PROJECTILE_LIFETIME = 30.0f;
 
 CSpellProjectile::CSpellProjectile(const SpellCastData &scd, DWORD target_id)//, unsigned int damage)
 {
@@ -34,15 +36,25 @@ CSpellProjectile::CSpellProjectile(const SpellCastData &scd, DWORD target_id)//,
 	SetInitialPhysicsState(INELASTIC_PS | SCRIPTED_COLLISION_PS | REPORT_COLLISIONS_PS | MISSILE_PS | LIGHTING_ON_PS | PATHCLIPPED_PS | ALIGNPATH_PS);
 }
 
+
 CSpellProjectile::~CSpellProjectile()
 {
 }
 
 void CSpellProjectile::Tick()
 {
-	if (!InValidCell() || (m_fSpawnTime + MAX_SPELL_PROJECTILE_LIFETIME) <= Timer::cur_time || (m_fDestroyTime <= Timer::cur_time))
+	if (!m_bDestroyMe)
 	{
-		MarkForDestroy();
+		if (!InValidCell() || (m_fDestroyTime <= Timer::cur_time))
+		{
+			MarkForDestroy();
+		}
+		// not destroyed yet and distance/time exceeded
+		else if (m_fDestroyTime > Timer::cur_time + 10 && (m_Position.distance(m_CachedSpellCastData.initial_cast_position) > m_CachedSpellCastData.max_range || (m_fSpawnTime + MAX_SPELL_PROJECTILE_LIFETIME - 1) <= Timer::cur_time))
+		{
+			HandleExplode();
+			m_fDestroyTime = Timer::cur_time + 1;
+		}
 	}
 }
 
@@ -52,46 +64,6 @@ void CSpellProjectile::PostSpawn()
 
 	EmitEffect(PS_Launch, m_fEffectMod);
 	m_fSpawnTime = Timer::cur_time;
-
-	if (m_CachedSpellCastData.spellEx->_meta_spell._spell->AsLifeProjectileSpell())
-	{
-		isLifeProjectile = true;
-		ProjectileLifeSpellEx *lifeProjectile = m_CachedSpellCastData.spellEx->_meta_spell._spell->AsLifeProjectileSpell();
-
-		DAMAGE_TYPE damageType = InqDamageType();
-		selfDrainedDamageRatio = lifeProjectile->_damage_ratio;
-		float drainPercentage = lifeProjectile->_drain_percentage;
-
-		CWeenieObject *caster = NULL;
-		if (m_SourceID)
-			caster = g_pWorld->FindObject(m_SourceID);
-
-		if (!caster)
-			return;
-
-		switch (damageType)
-		{
-		case HEALTH_DAMAGE_TYPE:
-		{
-			int amount = round((float)caster->GetHealth() * drainPercentage);
-			selfDrainedAmount = abs(caster->AdjustHealth(-amount));
-			break;
-		}
-		case STAMINA_DAMAGE_TYPE:
-		{
-			int amount = round((float)caster->GetStamina() * drainPercentage);
-			selfDrainedAmount = abs(caster->AdjustStamina(-amount));
-			break;
-		}
-		case MANA_DAMAGE_TYPE:
-		{
-			int amount = round((float)caster->GetMana() * drainPercentage);
-			selfDrainedAmount = abs(caster->AdjustMana(-amount));
-			break;
-		}
-		}
-		caster->CheckDeath(caster, damageType);
-	}
 }
 
 void CSpellProjectile::HandleExplode()
@@ -129,6 +101,12 @@ BOOL CSpellProjectile::DoCollision(const class AtkCollisionProfile &prof)
 			// EmitEffect(5, 0.8f);
 			HandleExplode();
 			m_fDestroyTime = Timer::cur_time + 1.0;
+			
+			if (pSource && pHit && pSource->AsPlayer() && pHit->AsPlayer())
+			{
+				pSource->AsPlayer()->UpdatePKActivity();
+				pHit->AsPlayer()->UpdatePKActivity();
+			}
 
 			// try to resist
 			bool bResisted = false;
@@ -170,7 +148,7 @@ BOOL CSpellProjectile::DoCollision(const class AtkCollisionProfile &prof)
 					double maxDamage = (double)minDamage + meta->_variance;
 
 					preVarianceDamage = maxDamage;
-					baseDamage = Random::RollDice(minDamage, maxDamage);
+					baseDamage = FastRNG.NextDouble(minDamage, maxDamage);
 
 					if (wand)
 					{
@@ -199,6 +177,13 @@ BOOL CSpellProjectile::DoCollision(const class AtkCollisionProfile &prof)
 				CalculateDamage(&dmgEvent, &m_CachedSpellCastData);
 
 				pHit->TryToDealDamage(dmgEvent);
+
+				if (pSource && pSource->AsPlayer())
+				{
+					// update the target's health on the casting player asap
+					((CPlayerWeenie*)pSource)->RefreshTargetHealth();
+				}
+
 			}
 		}
 	}
@@ -222,4 +207,10 @@ void CSpellProjectile::DoCollisionEnd(DWORD object_id)
 }
 
 
+void CSpellProjectile::makeLifeProjectile(int iSelfDrainedAmount, float fSelfDrainedDamageRatio)
+{
+	isLifeProjectile = true;
+	selfDrainedAmount = iSelfDrainedAmount;
+	selfDrainedDamageRatio = fSelfDrainedDamageRatio;
+}
 

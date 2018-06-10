@@ -6,6 +6,8 @@
 #include "World.h"
 #include "SpellcastingManager.h"
 #include "EmoteManager.h"
+#include "fastrand.h"
+
 
 #define DEFAULT_AWARENESS_RANGE 40.0
 
@@ -48,7 +50,7 @@ MonsterAIManager::MonsterAIManager(CMonsterWeenie *pWeenie, const Position &Home
 	}
 
 	if (pWeenie->m_Qualities._emote_table && pWeenie->m_Qualities._emote_table->_emote_table.lookup(Taunt_EmoteCategory))
-		_nextTaunt = Timer::cur_time + Random::GenUInt(10, 30); //We have taunts so schedule them.
+		_nextTaunt = Timer::cur_time + FastRNG.Next(10, 30); //We have taunts so schedule them.
 
 	// List of qualities that could be used to affect the AI behavior:
 	// AI_CP_THRESHOLD_INT
@@ -254,7 +256,7 @@ bool MonsterAIManager::SeekTarget()
 		{
 			// Random target
 			std::list<CWeenieObject *>::iterator i = validTargets.begin();
-			std::advance(i, Random::GenInt(0, (unsigned int)(validTargets.size() - 1)));
+			std::advance(i, FastRNG.Next((unsigned int)(validTargets.size() - 1)));
 			SetNewTarget(*i);
 			return true;
 		}
@@ -334,7 +336,7 @@ bool MonsterAIManager::RollDiceCastSpell()
 
 		while (spellIterator != m_pWeenie->m_Qualities._spell_book->_spellbook.end())
 		{
-			float dice = Random::RollDice(0.0f, 1.0f);
+			float dice = FastRNG.NextDouble();
 			float likelihood = spellIterator->second._casting_likelihood;
 
 			if (dice <= likelihood)
@@ -387,7 +389,7 @@ void MonsterAIManager::GenerateRandomAttack(DWORD *motion, ATTACK_HEIGHT *height
 {
 	*motion = 0;
 	*height = ATTACK_HEIGHT::UNDEF_ATTACK_HEIGHT;
-	*power = Random::GenFloat(0, 1);
+	*power = FastRNG.NextDouble();
 
 	if (m_pWeenie->_combatTable)
 	{
@@ -408,12 +410,12 @@ void MonsterAIManager::GenerateRandomAttack(DWORD *motion, ATTACK_HEIGHT *height
 			CombatManeuver *combatManeuver;
 			
 			// some monster have undef'd attack heights (hollow?) which is index 0
-			combatManeuver = m_pWeenie->_combatTable->TryGetCombatManuever(m_pWeenie->get_minterp()->InqStyle(), attackType, (ATTACK_HEIGHT)Random::GenUInt(0, 3));
+			combatManeuver = m_pWeenie->_combatTable->TryGetCombatManuever(m_pWeenie->get_minterp()->InqStyle(), attackType, (ATTACK_HEIGHT)FastRNG.NextUInt(0, 3));
 
 			if (!combatManeuver)
 			{
 				// and some don't
-				combatManeuver = m_pWeenie->_combatTable->TryGetCombatManuever(m_pWeenie->get_minterp()->InqStyle(), attackType, (ATTACK_HEIGHT)Random::GenUInt(1, 3));
+				combatManeuver = m_pWeenie->_combatTable->TryGetCombatManuever(m_pWeenie->get_minterp()->InqStyle(), attackType, (ATTACK_HEIGHT)FastRNG.NextUInt(1, 3));
 
 				if (!combatManeuver)
 				{
@@ -453,12 +455,12 @@ void MonsterAIManager::GenerateRandomAttack(DWORD *motion, ATTACK_HEIGHT *height
 			CombatManeuver *combatManeuver;
 
 			// some monster have undef'd attack heights (hollow?) which is index 0
-			combatManeuver = m_pWeenie->_combatTable->TryGetCombatManuever(m_pWeenie->get_minterp()->InqStyle(), attackType, (ATTACK_HEIGHT)Random::GenUInt(0, 3));
+			combatManeuver = m_pWeenie->_combatTable->TryGetCombatManuever(m_pWeenie->get_minterp()->InqStyle(), attackType, (ATTACK_HEIGHT)FastRNG.NextUInt(0, 3));
 
 			if (!combatManeuver)
 			{
 				// and some don't
-				combatManeuver = m_pWeenie->_combatTable->TryGetCombatManuever(m_pWeenie->get_minterp()->InqStyle(), attackType, (ATTACK_HEIGHT)Random::GenUInt(1, 3));
+				combatManeuver = m_pWeenie->_combatTable->TryGetCombatManuever(m_pWeenie->get_minterp()->InqStyle(), attackType, (ATTACK_HEIGHT)FastRNG.NextUInt(1, 3));
 
 				if (!combatManeuver)
 				{
@@ -625,7 +627,7 @@ void MonsterAIManager::OnDealtDamage(DamageEventData &damageData)
 	{
 		if (damageData.target)
 			m_pWeenie->ChanceExecuteEmoteSet(damageData.target->GetID(), Taunt_EmoteCategory);
-		_nextTaunt = Timer::cur_time + Random::GenUInt(10, 30);
+		_nextTaunt = Timer::cur_time + FastRNG.Next(10, 30);
 	}
 }
 
@@ -651,7 +653,7 @@ void MonsterAIManager::OnTookDamage(DamageEventData &damageData)
 			double healthPercent = m_pWeenie->GetHealthPercent();
 			if (m_fLastWoundedTauntHP > healthPercent)
 			{
-				double dice = Random::GenFloat(0.0, 1.0);
+				double dice = FastRNG.NextDouble();
 
 				for (auto &emoteSet : *emoteSetList)
 				{
@@ -940,7 +942,7 @@ void MonsterAIManager::UpdateMissileModeAttack()
 
 	if (_meleeWeapon != NULL || _hasUnarmedSkill) //we also have a melee weapon(or know how to fight without one)
 	{
-		double roll = Random::GenFloat(0.0, 1.0);
+		double roll = FastRNG.NextDouble();
 		if (fTargetDist < weaponMinRange && roll < 0.3) //the target is too close, let's go melee
 		{
 			SwitchState(MeleeModeAttack);
@@ -960,8 +962,8 @@ void MonsterAIManager::UpdateMissileModeAttack()
 		{
 			// do physics attack
 			DWORD motion = 0;
-			ATTACK_HEIGHT height = (ATTACK_HEIGHT)Random::GenUInt(1, 3);
-			float power = Random::GenFloat(0, 1);
+			ATTACK_HEIGHT height = (ATTACK_HEIGHT)FastRNG.NextUInt(1, 3);
+			float power = FastRNG.NextDouble();
 
 			m_pWeenie->TryMissileAttack(pTarget->GetID(), height, power);
 

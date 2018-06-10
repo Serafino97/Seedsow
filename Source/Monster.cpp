@@ -23,6 +23,7 @@
 #include "Door.h"
 #include "Player.h"
 #include "House.h"
+#include "fastrand.h"
 
 CMonsterWeenie::CMonsterWeenie()
 {
@@ -216,6 +217,11 @@ CContainerWeenie *CMonsterWeenie::FindValidNearbyContainer(DWORD containerId, fl
 		{
 			// maybe it's on the ground
 			CWeenieObject *object = g_pWorld->FindObject(containerId);
+			if (!object)
+			{
+				NotifyInventoryFailedEvent(containerId, WERROR_OBJECT_GONE);
+				return NULL;
+			}
 			container = object->AsContainer();
 
 			if (!container || container->HasOwner() || !container->InValidCell())
@@ -223,6 +229,7 @@ CContainerWeenie *CMonsterWeenie::FindValidNearbyContainer(DWORD containerId, fl
 				NotifyInventoryFailedEvent(containerId, WERROR_OBJECT_GONE);
 				return NULL;
 			}
+
 
 			if (DistanceTo(container, true) > maxDistance)
 			{
@@ -687,6 +694,19 @@ bool CMonsterWeenie::FinishMoveItemToWield(CWeenieObject *sourceItem, DWORD targ
 		return false;
 	}
 
+	if (sourceItem->InqIntQuality(ITEM_TYPE_INT, 0) == TYPE_ARMOR && sourceItem->InqIntQuality(LOCATIONS_INT, 0) == SHIELD_LOC)
+	{
+		sourceItem->m_Qualities.SetInt(SHIELD_VALUE_INT, sourceItem->InqIntQuality(ARMOR_LEVEL_INT, 0));
+	}
+
+	// Weeping wand nerf
+	if (sourceItem->m_Qualities.m_WeenieType == 35 && sourceItem->InqStringQuality(NAME_STRING, "") == "Weeping Wand"
+		&& (sourceItem->InqDIDQuality(SPELL_DID, 0) > 0 || sourceItem->InqFloatQuality(SLAYER_DAMAGE_BONUS_FLOAT, 0) != 1.4))
+	{
+		sourceItem->m_Qualities.RemoveDataID(SPELL_DID);
+		sourceItem->m_Qualities.SetFloat(SLAYER_DAMAGE_BONUS_FLOAT, 1.4);
+	}
+
 	//if (!sourceItem->HasOwner())
 	//{
 		if (CWeenieObject *generator = g_pWorld->FindObject(sourceItem->InqIIDQuality(GENERATOR_IID, 0)))
@@ -764,6 +784,9 @@ bool CMonsterWeenie::FinishMoveItemToWield(CWeenieObject *sourceItem, DWORD targ
 		{
 			difficulty = 0;
 			DWORD skillActivationTypeDID = 0;
+
+			DEBUG_DATA << "InqDataID (Monster.cpp:781): " << sourceItem->id << " " "... ";
+
 			if (sourceItem->m_Qualities.InqInt(ITEM_SKILL_LEVEL_LIMIT_INT, difficulty, TRUE, FALSE) && sourceItem->m_Qualities.InqDataID(ITEM_SKILL_LIMIT_DID, skillActivationTypeDID))
 			{
 				STypeSkill skillActivationType = (STypeSkill)skillActivationTypeDID;
@@ -1352,6 +1375,43 @@ void CMonsterWeenie::OnTookDamage(DamageEventData &damageData)
 		m_MonsterAI->OnTookDamage(damageData);
 }
 
+void CMonsterWeenie::UpdateDamageList(DamageEventData &damageData)
+{
+	if (damageData.source && damageData.outputDamageFinal > 0)
+	{
+		DWORD source = damageData.source->GetID();
+
+		if (m_aDamageSources.find(source) == m_aDamageSources.end())
+		{
+			m_aDamageSources[source] = 0;
+		}
+
+		m_aDamageSources[source] += damageData.outputDamageFinal;
+	}
+}
+
+void CMonsterWeenie::OnRegen(STypeAttribute2nd currentAttrib, int newAmount)
+{
+	CWeenieObject::OnRegen(currentAttrib, newAmount);
+
+	if (currentAttrib == HEALTH_ATTRIBUTE_2ND)
+	{
+		DWORD maxHealth = 0;
+		m_Qualities.InqAttribute2nd(MAX_HEALTH_ATTRIBUTE_2ND, maxHealth, FALSE);
+
+		if (maxHealth == newAmount)
+		{
+			// reset damage sources
+			m_aDamageSources.clear();
+		}
+	}
+}
+
+void CMonsterWeenie::GivePerksForKill(CWeenieObject *pKilled)
+{
+	// Prevent CWeenieObject::GivePerksForKill from running
+}
+
 void CMonsterWeenie::OnIdentifyAttempted(CWeenieObject *other)
 {
 	if (m_MonsterAI)
@@ -1523,8 +1583,16 @@ void CMonsterWeenie::OnMotionDone(DWORD motion, BOOL success)
 									int statChange = newStatValue - statValue;
 									if (statChange)
 									{
-										m_Qualities.SetAttribute2nd(statType, newStatValue);
-										NotifyAttribute2ndStatUpdated(statType);
+										if (statType == HEALTH_ATTRIBUTE_2ND)
+										{
+											AdjustHealth(statChange);
+											NotifyAttribute2ndStatUpdated(statType);
+										}
+										else
+										{
+											m_Qualities.SetAttribute2nd(statType, newStatValue);
+											NotifyAttribute2ndStatUpdated(statType);
+										}
 									}
 
 									const char *vitalName = "";
@@ -1600,7 +1668,11 @@ CCorpseWeenie *CMonsterWeenie::CreateCorpse(bool visible)
 		pCorpse->m_Qualities.SetBool(VISIBILITY_BOOL, false);
 
 	if (!g_pWorld->CreateEntity(pCorpse))
+	{
+		SERVER_ERROR << "Unable to create corpse of" << GetName().c_str() << "at Landblock:" << csprintf("0x%08X", m_Position.objcell_id) <<
+			"(X, Y, Z):" << m_Position.frame.m_origin.x << "," << m_Position.frame.m_origin.y << m_Position.frame.m_origin.z;
 		pCorpse = NULL;
+	}
 
 	m_DeathKillerIDForCorpse = 0;
 	m_DeathKillerNameForCorpse.clear();
@@ -1653,23 +1725,61 @@ void CMonsterWeenie::OnDeathAnimComplete()
 		if (pCorpse)
 			GenerateDeathLoot(pCorpse);
 	}
-	else if(player->_pendingCorpse)
-	{
-		//make the player corpse visible.
-		player->_pendingCorpse->m_Qualities.RemoveBool(VISIBILITY_BOOL);
-		player->_pendingCorpse->NotifyBoolStatUpdated(VISIBILITY_BOOL, false);
-		player->_pendingCorpse->NotifyObjectCreated(false);
-		player->_pendingCorpse->Save();
-		player->_pendingCorpse = NULL;
-	}
+
 }
 
 void CMonsterWeenie::OnDeath(DWORD killer_id)
 {
 	CWeenieObject::OnDeath(killer_id);
 	
-	m_DeathKillerIDForCorpse = killer_id;
-	if (!g_pWorld->FindObjectName(killer_id, m_DeathKillerNameForCorpse))
+	DWORD mostDamageSource = killer_id;
+	int mostDamage = 0;
+	int totalDamage = 0;
+
+	if (m_aDamageSources.size() == 0)
+	{
+		mostDamageSource = killer_id;
+	}
+	else {
+		for (auto it = m_aDamageSources.begin(); it != m_aDamageSources.end(); ++it)
+		{
+			totalDamage += it->second;
+
+			if (it->second > mostDamage)
+			{
+				mostDamage = it->second;
+				mostDamageSource = it->first;
+			}
+		}
+	}
+	int level = InqIntQuality(LEVEL_INT, 0);
+
+	int xpForKill = 0;
+
+	if (level <= 0)
+		xpForKill = 0;
+	else if (!m_Qualities.InqInt(XP_OVERRIDE_INT, xpForKill, 0, FALSE))
+		xpForKill = (int)GetXPForKillLevel(level);
+
+	xpForKill = (int)(xpForKill * g_pConfig->KillXPMultiplier(level));
+
+	if (xpForKill > 0)
+	{
+		// hand out xp proportionally
+		for (auto it = m_aDamageSources.begin(); it != m_aDamageSources.end(); ++it)
+		{
+			CWeenieObject *pSource = g_pWorld->FindObject(it->first);
+			double dPercentage = (double)it->second / totalDamage;
+
+			if (pSource)
+			{
+				pSource->GiveSharedXP(dPercentage * xpForKill, false);
+			}
+		}
+	}
+
+	m_DeathKillerIDForCorpse = mostDamageSource;
+	if (!g_pWorld->FindObjectName(mostDamageSource, m_DeathKillerNameForCorpse))
 		m_DeathKillerNameForCorpse.clear();
 
 	MakeMovementManager(TRUE);
@@ -1679,7 +1789,7 @@ void CMonsterWeenie::OnDeath(DWORD killer_id)
 
 	if (g_pConfig->HardcoreMode() && _IsPlayer())
 	{
-		if (CWeenieObject *pKiller = g_pWorld->FindObject(killer_id))
+		if (CWeenieObject *pKiller = g_pWorld->FindObject(mostDamageSource))
 		{
 			if (!g_pConfig->HardcoreModePlayersOnly() || pKiller->_IsPlayer())
 			{
@@ -1896,6 +2006,9 @@ void CMonsterWeenie::GetObjDesc(ObjDesc &objDesc)
 	CWeenieObject::GetObjDesc(objDesc);
 
 	DWORD head_object_id;
+
+	DEBUG_DATA << "InqDataID (Monster.cpp:2016): " << id << " " << m_Qualities.GetString(NAME_STRING, "");
+
 	if (m_Qualities.InqDataID(HEAD_OBJECT_DID, head_object_id))
 		objDesc.AddAnimPartChange(new AnimPartChange(16, head_object_id));
 
@@ -2026,7 +2139,7 @@ DWORD CMonsterWeenie::OnReceiveInventoryItem(CWeenieObject *source, CWeenieObjec
 
 			if (emoteCategory)
 			{
-				double dice = Random::GenFloat(0.0, 1.0);
+				double dice = FastRNG.NextDouble();
 				double lastProbability = -1.0;
 
 				for (auto &emoteSet : *emoteCategory)
@@ -2219,7 +2332,7 @@ float CMonsterWeenie::GetEffectiveArmorLevel(DamageEventData &damageData, bool b
 	buffDetails.CalculateEnchantedValue();
 
 	if (bIgnoreMagicArmor)
-		return buffDetails.rawValue;
+		return buffDetails.rawValue; //Take the Raw value for Hollows. Debuffs should not count.
 	else
 		return buffDetails.enchantedValue;
 }
@@ -2292,4 +2405,22 @@ BOOL CMonsterWeenie::DoCollision(const class ObjCollisionProfile &prof)
 	}
 
 	return CContainerWeenie::DoCollision(prof);
+}
+
+int CMonsterWeenie::AdjustHealth(int amount)
+{
+	CWeenieObject::AdjustHealth(amount);
+
+	DWORD maxHealth = 0;
+	m_Qualities.InqAttribute2nd(MAX_HEALTH_ATTRIBUTE_2ND, maxHealth, FALSE);
+	DWORD currentHealth = 0;
+	m_Qualities.InqAttribute2nd(HEALTH_ATTRIBUTE_2ND, currentHealth, FALSE);
+
+	if (maxHealth == currentHealth)
+	{
+		// reset damage sources
+		m_aDamageSources.clear();
+	}
+
+	return amount;
 }

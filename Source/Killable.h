@@ -1,5 +1,6 @@
 
 #pragma once
+#include "easylogging++.h"
 
 class CKillable
 {
@@ -14,7 +15,7 @@ public:
 #ifdef _DEBUG
 		if (szSource)
 		{
-			LOG(Temp, Debug, "Kill() @ %s: %u\n", szSource, dwLine);
+			DEBUG_DATA << "Kill() @" << szSource << ":" << dwLine;
 		}
 
 #endif

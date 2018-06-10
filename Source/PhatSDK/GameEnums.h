@@ -2416,7 +2416,7 @@ enum Command
 	Motion_OffhandPunchSlowMed = 0x10000199,
 	Motion_OffhandPunchSlowLow = 0x1000019a
 
-		/*
+	/*
 	Motion_SnowAngelState = 0x43000115,
 	Motion_WarmHands = 0x13000116,
 	Motion_CurtseyState = 0x43000117,
@@ -4031,6 +4031,97 @@ enum AlphaTestFunc
 	ALPHATESTFUNC_GREATEREQUAL = 0x7,
 	ALPHATESTFUNC_ALWAYS = 0x8,
 	ALPHATESTFUNC_INVALID = 0x7FFFFFFF,
+};
+
+enum ClientEventsEnum
+{
+	CHANGE_PLAYER_OPTION = 0x0005, // Change player option
+	MELEE_ATTACK = 0x0008, // Melee Attack
+	MISSILE_ATTACK = 0x000A, // Missile Attack
+	TEXT_CLIENT = 0x0015, // Client Text
+	STORE_ITEM = 0x0019, // Store Item
+	EQUIP_ITEM = 0x001A, // Equip Item
+	DROP_ITEM = 0x001B, // Drop Item
+	ALLEGIANCE_SWEAR = 0x001D, // Swear Allegiance request
+	ALLEGIANCE_BREAK = 0x001E, // Break Allegiance request
+	ALLEGIANCE_SEND_UPDATES = 0x001F, // Set 'Send Allegiance Updates' request
+	CONFIRMATION_RESPONSE = 0x0275, // confirmation response (currently only used for crafting)
+	UST_SALVAGE_REQUEST = 0x027D, // ust salvage request
+	SEND_TELL_BY_GUID = 0x0032, // Send tell by GUID
+	USE_ITEM_EX = 0x0035, // Use Item Ex
+	USE_OBJECT = 0x0036, // Use Object
+	SPEND_XP_VITALS = 0x0044, // spend XP on vitals (attribute2nd)
+	SPEND_XP_ATTRIBUTES = 0x0045, // spend XP on attributes
+	SPEND_XP_SKILLS = 0x0046, // spend XP on skills
+	SPEND_SKILL_CREDITS = 0x0047, // spend credits to train a skill
+	CAST_UNTARGETED_SPELL = 0x0048, // cast untargeted spell
+	CAST_TARGETED_SPELL = 0x004A, // cast targeted spell
+	CHANGE_COMBAT_STANCE = 0x0053, // Evt_Combat__ChangeCombatMode_ID "Change Combat Mode"
+	STACKABLE_MERGE = 0x0054, // Evt_Inventory__StackableMerge
+	STACKABLE_SPLIT_TO_CONTAINER = 0x0055, // Evt_Inventory__StackableSplitToContainer
+	STACKABLE_SPLIT_TO_3D = 0x0056, // Evt_Inventory__StackableSplitTo3D
+	STACKABLE_SPLIT_TO_WIELD = 0x019B, // Evt_Inventory__StackableSplitToWield
+	SEND_TELL_BY_NAME = 0x005D, // Send Tell by Name
+	BUY_FROM_VENDOR = 0x005F, // Buy from Vendor
+	SELL_TO_VENDOR = 0x0060, // Sell to Vendor
+	RECALL_LIFESTONE = 0x0063, // Lifestone Recall
+	LOGIN_COMPLETE = 0x00A1, // "Login Complete"
+	FELLOW_CREATE = 0x00A2, // "Create Fellowship"
+	FELLOW_QUIT = 0x00A3, // "Quit Fellowship"
+	FELLOW_DISMISS = 0x00A4, // "Fellowship Dismiss"
+	FELLOW_RECRUIT = 0x00A5, // "Fellowship Recruit"
+	FELLOW_UPDATE = 0x00A6, // "Fellowship Update"
+	PUT_OBJECT_IN_CONTAINER = 0x00CD, // Put object in container
+	INSCRIBE = 0x00BF, // "Inscribe"
+	IDENTIFY = 0x00C8, // Identify
+	ADMIN_TELEPORT = 0x00D6, // Advocate teleport (triggered by having an admin flag set, // clicking the mini-map)
+	TEXT_CHANNEL = 0x0147, // Channel Text
+	NO_LONGER_VIEWING_CONTAINER = 0x0195, // No longer viewing contents
+	ADD_ITEM_SHORTCUT = 0x019C, // Add item to shortcut bar
+	REMOVE_ITEM_SHORTCUT = 0x019D, // Remove item to shortcut bar
+	TOGGLE_SHOW_HELM = 0x01A1, // Toggle show helm?
+	CANCEL_ATTACK = 0x01B7, // Cancel attack
+	HEALTH_UPDATE_REQUEST = 0x01BF, // Request health update
+	TEXT_INDIRECT = 0x01DF, // Indirect Text (@me)
+	TEXT_EMOTE = 0x01E1, // Emote Text (*laugh* sends 'laughs')
+	ADD_TO_SPELLBAR = 0x01E3, // Add item to spell bar
+	REMOVE_FROM_SPELLBAR = 0x01E4, // Remove item from spell bar
+	PING = 0x01E9, // Ping
+	TRADE_OPEN = 0x1F6, // Open Trade Negotiations
+	TRADE_CLOSE = 0x1F7, // Close Trade Negotiations
+	TRADE_ADD = 0x1F8, // AddToTrade
+	TRADE_ACCEPT = 0x1FA, // Accept trade
+	TRADE_DECLINE = 0x1FB, // Decline trade
+	TRADE_RESET = 0x204, // Reset trade
+	HOUSE_BUY = 0x021C, // House_BuyHouse 
+	HOUSE_ABANDON = 0x021F, // House_AbandonHouse 
+	HOUSE_OF_PLAYER_QUERY = 0x21E, // House_QueryHouse 
+	HOUSE_RENT = 0x0221, // House_RentHouse 
+	HOUSE_ADD_GUEST = 0x0245, // House_AddPermanentGuest 
+	HOUSE_REMOVE_GUEST = 0x0246, // House_RemovePermanentGuest
+	HOUSE_SET_OPEN_ACCESS = 0x0247, // House_SetOpenHouseStatus
+	HOUSE_CHANGE_STORAGE_PERMISSIONS = 0x0249, // House_ChangeStoragePermission
+	HOUSE_CLEAR_STORAGE_PERMISSIONS = 0x024C, // House_RemoveAllStoragePermission 
+	HOUSE_GUEST_LIST = 0x024D, // House_RequestFullGuestList
+	ALLEGIANCE_MOTD = 0x0255, // Request allegiance MOTD
+	HOUSE_SET_OPEN_STORAGE_ACCESS = 0x025C, // House_AddAllStoragePermission
+	HOUSE_REMOVE_ALL_GUESTS = 0x025E, // House_RemoveAllPermanentGuests
+	RECALL_HOUSE = 0x0262, // House Recall
+	ITEM_MANA_REQUEST = 0x0263, // Request Item Mana
+	HOUSE_SET_HOOKS_VISIBILITY = 0x0266, // House_SetHooksVisibility 
+	HOUSE_CHANGE_ALLEGIANCE_GUEST_PERMISSIONS = 0x0267, // House_ModifyAllegianceGuestPermission 
+	HOUSE_CHANGE_ALLEGIANCE_STORAGE_PERMISSIONS = 0x0268, // House_ModifyAllegianceStoragePermission
+	RECALL_HOUSE_MANSION = 0x0278, // House_TeleToMansion
+	DIE_COMMAND = 0x0279, // "/die" command
+	ALLEGIANCE_INFO_REQUEST = 0x027B, // allegiance info request
+	SPELLBOOK_FILTERS = 0x0286, // filter player spellbook by type/level
+	RECALL_MARKET = 0x028D, // Marketplace Recall
+	FELLOW_ASSIGN_NEW_LEADER = 0x0290, // "Fellowship Assign New Leader"
+	FELLOW_CHANGE_OPENNESS = 0x0291, // "Fellowship Change Openness"
+	RECALL_ALLEGIANCE_HOMETOWN = 0x02AB, // Allegiance_RecallAllegianceHometown (bindstone)
+	JUMP_MOVEMENT = 0xF61B, // Jump Movement
+	MOVE_TO = 0xF61C, // CM_Movement__Event_MoveToState (update vector movement?)
+	UPDATE_POSITION = 0xF753 // Update Exact Position
 };
 
 #include "GameStatEnums.h"

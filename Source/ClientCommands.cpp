@@ -39,6 +39,10 @@
 #include "RandomRange.h"
 #include "House.h"
 #include "GameEventManager.h"
+#include "easylogging++.h"
+#include "ObjectMsgs.h"
+#include "EnumUtil.h"
+#include "fastrand.h"
 
 // Most of these commands are just for experimenting and never meant to be used in a real game
 // TODO: Add flags to these commands so they are only accessible under certain modes such as a sandbox mode
@@ -82,7 +86,38 @@ CLIENT_COMMAND(simulateaccess, "<level>", "Simulate access level.", ADMIN_ACCESS
 	if (argc < 1)
 		return true;
 
-	pPlayer->GetClient()->SetAccessLevel((unsigned) atoi(argv[0]));
+	pPlayer->GetClient()->SetAccessLevel((unsigned)atoi(argv[0]));
+	return false;
+}
+#endif
+
+#ifndef PUBLIC_BUILD
+CLIENT_COMMAND(skillspendexp, "<skillID> <exp>", "Attempts to spend the input exp to the given skill.", ADMIN_ACCESS)
+{
+
+	if (argc < 2)
+	{
+		pPlayer->SendText("An arg is missing", LTT_DEFAULT);
+		return true;
+	}
+
+	DWORD seq = 1;
+	DWORD eventNum = 0x0046;
+	DWORD dwSkill = (unsigned)atoi(argv[0]);
+	DWORD dwXP = (unsigned)atoi(argv[1]);
+
+	std::vector<DWORD> data;
+	data.push_back(seq);
+	data.push_back(eventNum);
+	data.push_back(dwSkill);
+	data.push_back(dwXP);
+
+	BinaryReader reader(data.data(), data.size() * sizeof(DWORD));
+
+	player_client->GetEvents()->ProcessEvent(&reader);
+
+	pPlayer->SendText(csprintf("Attempted to add %i exp to the skill", dwXP), LTT_DEFAULT);
+
 	return false;
 }
 #endif
@@ -102,7 +137,7 @@ CLIENT_COMMAND(startgame, "[gameid]", "Spawns something by name (right now works
 {
 	if (argc < 1)
 		return true;
-	
+
 	int game = atoi(argv[0]);
 
 	switch (game)
@@ -167,9 +202,10 @@ CLIENT_COMMAND(global, "<text> [color=1]", "Displays text globally.", ADMIN_ACCE
 	return false;
 }
 
-/*
+
 CLIENT_COMMAND(animationall, "<num> [speed]", "Performs an animation for everyone.", ADMIN_ACCESS)
 {
+
 	if (argc < 1)
 	{
 		return true;
@@ -177,17 +213,33 @@ CLIENT_COMMAND(animationall, "<num> [speed]", "Performs an animation for everyon
 
 	WORD wIndex = atoi(argv[0]);
 	float fSpeed = (argc >= 2) ? (float)atof(argv[1]) : 1.0f;
-	float fDelay = 0.5f;
+	fSpeed = min(10.0, max(0.1, fSpeed));
 
 	PlayerWeenieMap *pPlayers = g_pWorld->GetPlayers();
 	for (PlayerWeenieMap::iterator i = pPlayers->begin(); i != pPlayers->end(); i++)
 	{
-		i->second->Animation_PlayPrimary(wIndex, fSpeed, fDelay);
+		i->second->_server_control_timestamp += 2;
+
+		i->second->last_move_was_autonomous = false;
+
+		MovementParameters params;
+		params.action_stamp = ++pPlayer->m_wAnimSequence;
+		params.speed = fSpeed;
+		params.autonomous = 0;
+		params.modify_interpreted_state = 1;
+
+		MovementStruct mvs;
+		mvs.motion = GetCommandID(wIndex);
+		mvs.params = &params;
+		mvs.type = MovementTypes::RawCommand;
+		i->second->get_minterp()->PerformMovement(mvs);
+		i->second->Animation_Update();
+
 	}
 
 	return false;
 }
-*/
+
 
 CLIENT_COMMAND(freezeall, "", "Freezes or unfreezes everyone.", ADMIN_ACCESS)
 {
@@ -579,10 +631,10 @@ CLIENT_COMMAND(adminvision, "<enabled>", "", ADMIN_ACCESS)
 
 	/*
 	if (_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "admin") &&
-		_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "cmoskitest") &&
-		_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "peatest"))
-		return false;
-		*/
+	_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "cmoskitest") &&
+	_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "peatest"))
+	return false;
+	*/
 
 	pPlayer->m_bAdminVision = atoi(argv[0]) ? true : false;
 
@@ -634,10 +686,10 @@ CLIENT_COMMAND(debug, "<index>", "", ADMIN_ACCESS)
 
 	/*
 	if (_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "admin") &&
-		_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "cmoskitest") &&
-		_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "peatest"))
-		return false;
-		*/
+	_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "cmoskitest") &&
+	_stricmp(pPlayer->GetClient()->GetAccountInfo().username.c_str(), "peatest"))
+	return false;
+	*/
 
 	int debugLevel = atoi(argv[0]);
 
@@ -723,18 +775,18 @@ CLIENT_COMMAND(debug, "<index>", "", ADMIN_ACCESS)
 				entry.wcid, GetWCIDName(entry.wcid), entry.try_to_bond, entry.palette, entry.shade, entry.destination, entry.stack_size);
 		}
 	}
-	
+
 	if (target->m_Qualities._emote_table)
 	{
 		info += csprintf("\nEmote Table:");
 		for (auto &emoteCategory : target->m_Qualities._emote_table->_emote_table)
 		{
-			info += csprintf("\nEmoteCategory %s (%u)", Emote::EmoteCategoryToName((EmoteCategory) emoteCategory.first), emoteCategory.first);
+			info += csprintf("\nEmoteCategory %s (%u)", Emote::EmoteCategoryToName((EmoteCategory)emoteCategory.first), emoteCategory.first);
 
 			for (auto &emoteSet : emoteCategory.second)
 			{
 				info += csprintf("\n  EmoteSet %s (%u) probability %f", Emote::EmoteCategoryToName((EmoteCategory)emoteSet.category), emoteSet.category, emoteSet.probability);
-				
+
 				switch (emoteSet.category)
 				{
 				case Refuse_EmoteCategory:
@@ -944,16 +996,16 @@ CLIENT_COMMAND(vismode, "<mode>", "Changes your physics state.", ADMIN_ACCESS)
 /*
 CLIENT_COMMAND(spawnbael, "", "Spawns Bael'Zharon.", ADMIN_ACCESS)
 {
-	if (!SpawningEnabled(pPlayer))
-	{
-		return false;
-	}
+if (!SpawningEnabled(pPlayer))
+{
+return false;
+}
 
-	CBaelZharon *pBael = new CBaelZharon();
-	pBael->SetInitialPosition(pPlayer->GetPosition());
-	g_pWorld->CreateEntity(pBael);
+CBaelZharon *pBael = new CBaelZharon();
+pBael->SetInitialPosition(pPlayer->GetPosition());
+g_pWorld->CreateEntity(pBael);
 
-	return false;
+return false;
 }
 */
 
@@ -974,7 +1026,7 @@ CLIENT_COMMAND(squelchall, "", "Squelch all.", ADMIN_ACCESS)
 {
 	if (argc < 1)
 		return true;
-	
+
 	g_bSilence = atoi(argv[0]) ? true : false;
 
 	if (g_bSilence)
@@ -1005,17 +1057,17 @@ CLIENT_COMMAND(spawnmonsterenabled, "", "Toggle spawning.", ADMIN_ACCESS)
 /*
 CLIENT_COMMAND(targetdrudge, "", "Spawns a Target Drudge.", BASIC_ACCESS)
 {
-	if (!SpawningEnabled(pPlayer))
-	{
-		return false;
-	}
+if (!SpawningEnabled(pPlayer))
+{
+return false;
+}
 
-	CTargetDrudge *pDrudge = new CTargetDrudge();
-	pDrudge->SetInitialPosition(pPlayer->GetPosition().add_offset(Vector(0, 0, 1.0f)));
+CTargetDrudge *pDrudge = new CTargetDrudge();
+pDrudge->SetInitialPosition(pPlayer->GetPosition().add_offset(Vector(0, 0, 1.0f)));
 
-	g_pWorld->CreateEntity(pDrudge);
+g_pWorld->CreateEntity(pDrudge);
 
-	return false;
+return false;
 }
 */
 
@@ -1066,7 +1118,7 @@ const char *skipHexPrefix(const char *hexString)
 {
 	if (hexString[0] == '0' && hexString[1] == 'x')
 		hexString += 2;
-	
+
 	return hexString;
 }
 
@@ -1197,44 +1249,44 @@ CLIENT_COMMAND(spawnmodels, "<start index> <end index>", "Spawns a range of mode
 /*
 CLIENT_COMMAND(spawnmonster2, "<model index> <base palette>", "Spawns a monster.", BASIC_ACCESS)
 {
-	if (argc < 3)
-	{
-		return true;
-	}
+if (argc < 3)
+{
+return true;
+}
 
-	if (!SpawningEnabled(pPlayer))
-	{
-		return false;
-	}
+if (!SpawningEnabled(pPlayer))
+{
+return false;
+}
 
-	DWORD dwModel = strtoul(argv[0], NULL, 16);
-	if (!(dwModel & 0xFF000000))
-		dwModel |= 0x02000000;
+DWORD dwModel = strtoul(argv[0], NULL, 16);
+if (!(dwModel & 0xFF000000))
+dwModel |= 0x02000000;
 
-	DWORD dwPalette1 = strtoul(argv[1], NULL, 16);
-	DWORD dwPalette2 = strtoul(argv[2], NULL, 16);
-	dwPalette1 &= 0xFFFFF;
-	dwPalette2 &= 0xFFFFF;
+DWORD dwPalette1 = strtoul(argv[1], NULL, 16);
+DWORD dwPalette2 = strtoul(argv[2], NULL, 16);
+dwPalette1 &= 0xFFFFF;
+dwPalette2 &= 0xFFFFF;
 
-	CMonsterWeenie *pSpawn = new CMonsterWeenie();
-	pSpawn->SetSetupID(dwModel);
-	pSpawn->m_scale = 1.0f;
-	pSpawn->SetName(csprintf("0x%X 0x%X 0x%X", dwModel, dwPalette1, dwPalette2));
-	pSpawn->SetInitialPosition(pPlayer->GetPosition());
-	pSpawn->m_miBaseModel.dwBasePalette = dwPalette1;
-	pSpawn->m_miBaseModel.lPalettes.push_back(PaletteRpl(dwPalette2, 0, 0));
+CMonsterWeenie *pSpawn = new CMonsterWeenie();
+pSpawn->SetSetupID(dwModel);
+pSpawn->m_scale = 1.0f;
+pSpawn->SetName(csprintf("0x%X 0x%X 0x%X", dwModel, dwPalette1, dwPalette2));
+pSpawn->SetInitialPosition(pPlayer->GetPosition());
+pSpawn->m_miBaseModel.dwBasePalette = dwPalette1;
+pSpawn->m_miBaseModel.lPalettes.push_back(PaletteRpl(dwPalette2, 0, 0));
 
-	g_pWorld->CreateEntity(pSpawn);
+g_pWorld->CreateEntity(pSpawn);
 
-	pSpawn->SetLongDescription(csprintf("This monster was spawned by %s.\nModel #: %08X\nPalette #: %08X %08X\n", pPlayer->GetName().c_str(), dwModel, dwPalette1, dwPalette2));
+pSpawn->SetLongDescription(csprintf("This monster was spawned by %s.\nModel #: %08X\nPalette #: %08X %08X\n", pPlayer->GetName().c_str(), dwModel, dwPalette1, dwPalette2));
 
-	return false;
+return false;
 }
 */
 
 #ifndef PUBLIC_BUILD
 CLIENT_COMMAND(spawnmonster, "<model index> [scale=1] [name=*] [dotcolor]", "Spawns a monster.", ADMIN_ACCESS)
-{	
+{
 	if (argc < 1)
 	{
 		return true;
@@ -1258,7 +1310,7 @@ CLIENT_COMMAND(spawnmonster, "<model index> [scale=1] [name=*] [dotcolor]", "Spa
 	pSpawn->SetScale(flScale);
 	pSpawn->SetName(szName);
 	pSpawn->SetInitialPosition(pPlayer->GetPosition().add_offset(Vector(0, 6, 6)));
-	pSpawn->SetRadarBlipColor((RadarBlipEnum) dotColor);
+	pSpawn->SetRadarBlipColor((RadarBlipEnum)dotColor);
 	g_pWorld->CreateEntity(pSpawn);
 
 	pSpawn->SetLongDescription(csprintf("This monster was spawned by %s.\nModel #: %08X\nScale: %f\n", pPlayer->GetName().c_str(), dwModel, flScale));
@@ -1343,11 +1395,11 @@ SERVER_COMMAND(kick, "<player name>", "Kicks the specified player.", SENTINEL_AC
 
 	if (pPlayer)
 	{
-		LOG(Command, Normal, "\"%s\" is using the kick command.\n", pPlayer->GetName().c_str());
+		SERVER_INFO << pPlayer->GetName().c_str() << "is using the kick command.";
 	}
 	else
 	{
-		LOG(Command, Normal, "Server is using the kick command.\n");
+		SERVER_INFO << "Server is using the kick command.";
 	}
 
 	CPlayerWeenie *pTarget = g_pWorld->FindPlayer(argv[0]);
@@ -1460,7 +1512,7 @@ CLIENT_COMMAND(instakill, "<radius>", "Deals damage to all nearby creatures.", A
 		dmgEvent.source = pPlayer;
 		dmgEvent.target = entry;
 		dmgEvent.damage_form = DF_PHYSICAL;
-		dmgEvent.damage_type = DAMAGE_TYPE::BLUDGEON_DAMAGE_TYPE;		
+		dmgEvent.damage_type = DAMAGE_TYPE::BLUDGEON_DAMAGE_TYPE;
 		dmgEvent.damageAfterMitigation = dmgEvent.damageBeforeMitigation = 1000000;
 		pPlayer->TryToDealDamage(dmgEvent);
 	}
@@ -1606,7 +1658,7 @@ CLIENT_COMMAND(addspellbyid, "id", "Adds a spell by ID", ADMIN_ACCESS)
 {
 	if (argc < 1)
 		return true;
-	
+
 	int id = atoi(argv[0]);
 
 	CSpellTable * pSpellTable = MagicSystem::GetSpellTable();
@@ -1616,7 +1668,7 @@ CLIENT_COMMAND(addspellbyid, "id", "Adds a spell by ID", ADMIN_ACCESS)
 		return false;
 	}
 	pPlayer->LearnSpell(id, true);
-	
+
 	return false;
 }
 
@@ -1647,6 +1699,120 @@ CLIENT_COMMAND(fixbusy, "", "Makes you unbusy if you are stuck.", BASIC_ACCESS)
 	return false;
 }
 
+CLIENT_COMMAND(fixclient, "", "Resets the client back to login state.", BASIC_ACCESS)
+{
+	BinaryWriter *LC = ::LoginCharacter(pPlayer);
+	pPlayer->SendNetMessage(LC->GetData(), LC->GetSize(), PRIVATE_MSG, TRUE);
+	delete LC;
+
+	return false;
+}
+
+std::map<std::string, int> commandMap;
+
+CLIENT_COMMAND(config, "<setting> <on/off>", "Manually sets a character option on the server.\nUse /config list to see a list of settings.", BASIC_ACCESS)
+{
+	bool bError = false;
+	if (argc < 1)
+	{
+		bError = true;
+	}
+
+	int iSetTo = 0;
+	if (argc > 1)
+	{
+		if (argv[1] == "on")
+		{
+			iSetTo = 1;
+		}
+		else if (argv[1] == "off")
+		{
+			iSetTo = -1;
+		}
+	}
+
+	if (!bError)
+	{
+		if (strcmp(argv[0], "list") == 0)
+		{
+			pPlayer->SendText("Common settings:\nConfirmVolatileRareUse, MainPackPreferred, SalvageMultiple, SideBySideVitals, UseCraftSuccessDialog", LTT_DEFAULT);
+			pPlayer->SendText("Interaction settings:\nAcceptLootPermits, AllowGive, AppearOffline, AutoAcceptFellowRequest, DragItemOnPlayerOpensSecureTrade, FellowshipShareLoot, FellowshipShareXP, IgnoreAllegianceRequests, IgnoreFellowshipRequests, IgnoreTradeRequests, UseDeception", LTT_DEFAULT);
+			pPlayer->SendText("UI settings:\nCoordinatesOnRadar, DisableDistanceFog, DisableHouseRestrictionEffects, DisableMostWeatherEffects, FilterLanguage, LockUI, PersistentAtDay, ShowCloak, ShowHelm, ShowTooltips, SpellDuration, TimeStamp, ToggleRun, UseMouseTurning", LTT_DEFAULT);
+			pPlayer->SendText("Chat settings:\nHearAllegianceChat, HearGeneralChat, HearLFGChat, HearRoleplayChat, HearSocietyChat, HearTradeChat, StayInChatMode", LTT_DEFAULT);
+			pPlayer->SendText("Combat settings:\nAdvancedCombatUI, AutoRepeatAttack, AutoTarget, LeadMissileTargets, UseChargeAttack, UseFastMissiles, ViewCombatTarget, VividTargetingIndicator", LTT_DEFAULT);
+			pPlayer->SendText("Character display settings:\nDisplayAge, DisplayAllegianceLogonNotifications, DisplayChessRank, DisplayDateOfBirth, DisplayFishingSkill, DisplayNumberCharacterTitles, DisplayNumberDeaths", LTT_DEFAULT);
+			return false;
+		}
+
+		int settingMask = 0;
+		bool bOptions1 = FALSE;
+		bool bOptions2 = FALSE;
+
+		std::string strOption = argv[0];
+		CharacterOption option1 = EnumUtil.StringToCharacterOption(strOption);
+		if (option1)
+		{
+			DWORD charOptions = pPlayer->GetCharacterOptions();
+
+			iSetTo = (charOptions & option1) ? -1 : 1;
+
+			if (iSetTo == 1)
+			{
+				charOptions |= option1;
+			}
+			else
+			{
+				charOptions &= ~option1;
+			}
+
+			pPlayer->SetCharacterOptions(charOptions);
+
+			std::string onOff = iSetTo == 1 ? "on" : "off";
+
+			pPlayer->SendText(("Character option " + strOption + " is now " + onOff + ".").c_str(), LTT_SYSTEM_EVENT);
+
+			// Update the client
+			BinaryWriter *LC = ::LoginCharacter(pPlayer);
+			pPlayer->SendNetMessage(LC->GetData(), LC->GetSize(), PRIVATE_MSG, TRUE);
+			delete LC;
+			return false;
+		}
+
+		CharacterOptions2 option2 = EnumUtil.StringToCharacterOptions2(argv[0]);
+		if (option2)
+		{
+			DWORD charOptions2 = pPlayer->GetCharacterOptions2();
+
+			iSetTo = (charOptions2 & option2) ? -1 : 1;
+
+			if (iSetTo == 1)
+			{
+				charOptions2 |= option2;
+			}
+			else
+			{
+				charOptions2 &= ~option2;
+			}
+
+			pPlayer->SetCharacterOptions2(charOptions2);
+
+			std::string onOff = iSetTo == 1 ? "on" : "off";
+
+			pPlayer->SendText(("Character option " + strOption + " is now " + onOff + ".").c_str(), LTT_SYSTEM_EVENT);
+
+			// Update the client
+			BinaryWriter *LC = ::LoginCharacter(pPlayer);
+			pPlayer->SendNetMessage(LC->GetData(), LC->GetSize(), PRIVATE_MSG, TRUE);
+			delete LC;
+			return false;
+		}
+
+		pPlayer->SendText("Unrecognised setting!", LTT_DEFAULT);
+	}
+
+	return true;
+}
+
 CLIENT_COMMAND(testburden, "", "", ADMIN_ACCESS)
 {
 	float burden = -1.0f;
@@ -1674,85 +1840,85 @@ CLIENT_COMMAND(test, "<index>", "Performs the specified test.", ADMIN_ACCESS)
 	switch (atoi(argv[0]))
 	{
 	case 1:
-		{
-			float goodZ = CalcSurfaceZ(position.objcell_id, position.frame.m_origin.x, position.frame.m_origin.y);
-			const char* text = csprintf("CalcZ: %f PlayerZ: %f", goodZ, position.frame.m_origin.z);
-			pPlayer->SendText(text, LTT_DEFAULT);
-			break;
-		}
+	{
+		float goodZ = CalcSurfaceZ(position.objcell_id, position.frame.m_origin.x, position.frame.m_origin.y);
+		const char* text = csprintf("CalcZ: %f PlayerZ: %f", goodZ, position.frame.m_origin.z);
+		pPlayer->SendText(text, LTT_DEFAULT);
+		break;
+	}
 	case 2:
-		{
-			double v = -1.0;
-			int i = -1;
-			pPlayer->m_Qualities.InqInt(ARMOR_LEVEL_INT, i);
-			pPlayer->SendText(csprintf("ArmorMod: %d", i), LTT_DEFAULT);
-			pPlayer->m_Qualities.InqFloat(ARMOR_MOD_VS_FIRE_FLOAT, v);
-			pPlayer->SendText(csprintf("ArmorFireMod: %f", v), LTT_DEFAULT);
-			pPlayer->m_Qualities.InqFloat(ARMOR_MOD_VS_BLUDGEON_FLOAT, v);
-			pPlayer->SendText(csprintf("ArmorBludgeonMod: %f", v), LTT_DEFAULT);
-			pPlayer->m_Qualities.InqFloat(RESIST_FIRE_FLOAT, v);
-			pPlayer->SendText(csprintf("ResistFireMod: %f", v), LTT_DEFAULT);
-			pPlayer->m_Qualities.InqFloat(RESIST_BLUDGEON_FLOAT, v);
-			pPlayer->SendText(csprintf("ResistBludgeonMod: %f", v), LTT_DEFAULT);
+	{
+		double v = -1.0;
+		int i = -1;
+		pPlayer->m_Qualities.InqInt(ARMOR_LEVEL_INT, i);
+		pPlayer->SendText(csprintf("ArmorMod: %d", i), LTT_DEFAULT);
+		pPlayer->m_Qualities.InqFloat(ARMOR_MOD_VS_FIRE_FLOAT, v);
+		pPlayer->SendText(csprintf("ArmorFireMod: %f", v), LTT_DEFAULT);
+		pPlayer->m_Qualities.InqFloat(ARMOR_MOD_VS_BLUDGEON_FLOAT, v);
+		pPlayer->SendText(csprintf("ArmorBludgeonMod: %f", v), LTT_DEFAULT);
+		pPlayer->m_Qualities.InqFloat(RESIST_FIRE_FLOAT, v);
+		pPlayer->SendText(csprintf("ResistFireMod: %f", v), LTT_DEFAULT);
+		pPlayer->m_Qualities.InqFloat(RESIST_BLUDGEON_FLOAT, v);
+		pPlayer->SendText(csprintf("ResistBludgeonMod: %f", v), LTT_DEFAULT);
 
-			break;
-		}
+		break;
+	}
 	case 3:
+	{
+		CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByName("Virindi Puppet", &pPlayer->m_Position.add_offset(Vector(0.0, 5, 1)), true);
+
+		if (weenie)
 		{
-			CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByName("Virindi Puppet", &pPlayer->m_Position.add_offset(Vector(0.0, 5, 1)), true);
-
-			if (weenie)
-			{
-				CMonsterWeenie *monster = (CMonsterWeenie *)weenie;
-			}
-
-			break;
+			CMonsterWeenie *monster = (CMonsterWeenie *)weenie;
 		}
+
+		break;
+	}
 	case 4:
+	{
+		CWeenieObject *weenie = g_pWorld->FindObject(pPlayer->m_LastAssessed);
+
+		if (weenie && weenie->AsMonster() && !weenie->AsPlayer())
 		{
-			CWeenieObject *weenie = g_pWorld->FindObject(pPlayer->m_LastAssessed);
-
-			if (weenie && weenie->AsMonster() && !weenie->AsPlayer())
-			{
-				weenie->AsMonster()->MakeSpellcastingManager()->CreatureBeginCast(pPlayer->GetID(), 27);
-			}
-
-			break;
+			weenie->AsMonster()->MakeSpellcastingManager()->CreatureBeginCast(pPlayer->GetID(), 27);
 		}
+
+		break;
+	}
 	case 5:
-		{
-			pPlayer->set_state(pPlayer->m_PhysicsState & ~(GRAVITY_PS), TRUE);
-			break;
-		}
+	{
+		pPlayer->set_state(pPlayer->m_PhysicsState & ~(GRAVITY_PS), TRUE);
+		break;
+	}
 	case 6:
-		{
-			pPlayer->set_state(pPlayer->m_PhysicsState | (GRAVITY_PS), TRUE);
-			break;
-		}
+	{
+		pPlayer->set_state(pPlayer->m_PhysicsState | (GRAVITY_PS), TRUE);
+		break;
+	}
 
 #if 0
 	case 3: {
-			CBaseItem *pSpawn = new CBoboHelm();
-			pSpawn->m_Position = position;
-			g_pWorld->CreateEntity(pSpawn);
+		CBaseItem *pSpawn = new CBoboHelm();
+		pSpawn->m_Position = position;
+		g_pWorld->CreateEntity(pSpawn);
 
-			BinaryWriter* co = pSpawn->CreateMessage();
-			//OutputConsoleBytes(co->GetData(), co->GetSize());
-			delete co;
+		BinaryWriter* co = pSpawn->CreateMessage();
+		//OutputConsoleBytes(co->GetData(), co->GetSize());
+		delete co;
 
-			break;
-		}
+		break;
+	}
 	case 4: {
-			CBaseItem *pSpawn = new CPhatRobe();
-			pSpawn->m_Position = position;
-			g_pWorld->CreateEntity(pSpawn);
+		CBaseItem *pSpawn = new CPhatRobe();
+		pSpawn->m_Position = position;
+		g_pWorld->CreateEntity(pSpawn);
 
-			BinaryWriter* co = pSpawn->CreateMessage();
-			//OutputConsoleBytes(co->GetData(), co->GetSize());
-			delete co;
+		BinaryWriter* co = pSpawn->CreateMessage();
+		//OutputConsoleBytes(co->GetData(), co->GetSize());
+		delete co;
 
-			break;
-		}
+		break;
+	}
 #endif
 	}
 
@@ -1768,7 +1934,7 @@ CLIENT_COMMAND(animation, "<index> [speed=1]", "Plays a primary animation.", ADM
 	WORD wIndex = atoi(argv[0]);
 	float fSpeed = (argc >= 2) ? (float)atof(argv[1]) : 1.0f;
 	fSpeed = min(10.0, max(0.1, fSpeed));
-	
+
 	pPlayer->_server_control_timestamp += 2;
 
 	pPlayer->last_move_was_autonomous = false;
@@ -1873,6 +2039,24 @@ CLIENT_COMMAND(setbael, "", "Sets you to be Bael'Zharon.", ADMIN_ACCESS)
 }
 #endif
 
+#ifndef PUBLIC_BUILD
+CLIENT_COMMAND(setplayer, "[wcid]", "Sets your Player Character defaults to that of the given wcid.", ADMIN_ACCESS)
+{
+	if (argc < 1)
+		return true;
+
+	g_pWeenieFactory->ApplyWeenieDefaults(pPlayer, atoi(argv[0]));
+	pPlayer->m_Qualities.SetInt(RADARBLIP_COLOR_INT, 2);
+	pPlayer->m_Qualities.SetInt(PLAYER_KILLER_STATUS_INT, Baelzharon_PKStatus);
+	pPlayer->m_Qualities.SetInt(CONTAINERS_CAPACITY_INT, 7);
+	pPlayer->m_Qualities.SetInt(ITEMS_CAPACITY_INT, 200);
+
+	player_client->GetEvents()->BeginLogout();
+
+	return false;
+}
+#endif
+
 CLIENT_COMMAND(setname, "[name]", "Changes the last assessed target's name.", ADMIN_ACCESS)
 {
 	if (argc < 1)
@@ -1896,36 +2080,36 @@ CLIENT_COMMAND(setname, "[name]", "Changes the last assessed target's name.", AD
 #ifndef PUBLIC_BUILD
 CLIENT_COMMAND(setmodel, "[monster]", "Changes your model to a monster.", ADMIN_ACCESS)
 {
-	pPlayer->SendText("[monster]", "Changes your model to a monster.", LTT_DEFAULT);
-	return true;
+	pPlayer->SendText("Command disabled.", LTT_DEFAULT);
+	return false;
 
-	
+	/*
 	if (!SpawningEnabled(pPlayer))
 	{
-		return false;
+	return false;
 	}
 
 	if (argc < 1)
 	{
-		return true;
+	return true;
 	}
 
 	CCapturedWorldObjectInfo *pMonsterInfo = g_pGameDatabase->GetCapturedMonsterData(argv[0]);
 
 	if (!pMonsterInfo)
 	{
-		pPlayer->SendText("Couldn't find that monster!", LTT_DEFAULT);
-		return false;
+	pPlayer->SendText("Couldn't find that monster!", LTT_DEFAULT);
+	return false;
 	}
 
 	float fScale = 1.0f;
 	if (argc >= 2)
 	{
-		fScale = (float)atof(argv[1]);
-		if (fScale < 0.01)
-			fScale = 0.01f;
-		if (fScale > 1000.0)
-			fScale = 1000;
+	fScale = (float)atof(argv[1]);
+	if (fScale < 0.01)
+	fScale = 0.01f;
+	if (fScale > 1000.0)
+	fScale = 1000;
 	}
 
 	pPlayer->m_miBaseModel = pMonsterInfo->appearance;
@@ -1944,33 +2128,33 @@ CLIENT_COMMAND(setmodel, "[monster]", "Changes your model to a monster.", ADMIN_
 /*
 CLIENT_COMMAND(invisible, "", "Go Invisible", BASIC_ACCESS)
 {
-	float fSpeed = (argc >= 2) ? (float)atof(argv[1]) : 1.0f;
-	pPlayer->Animation_PlayPrimary(160, fSpeed, 0.5f);
-	return false;
+float fSpeed = (argc >= 2) ? (float)atof(argv[1]) : 1.0f;
+pPlayer->Animation_PlayPrimary(160, fSpeed, 0.5f);
+return false;
 }
 
 CLIENT_COMMAND(visible, "", "Go Visible", BASIC_ACCESS)
 {
-	float fSpeed = (argc >= 2) ? (float)atof(argv[1]) : 1.0f;
-	pPlayer->Animation_PlayPrimary(161, fSpeed, 0.5f);
-	return false;
+float fSpeed = (argc >= 2) ? (float)atof(argv[1]) : 1.0f;
+pPlayer->Animation_PlayPrimary(161, fSpeed, 0.5f);
+return false;
 }
 */
 
 /*
 CLIENT_COMMAND(motion, "<index> [speed=1]", "Plays a sequenced animation.", BASIC_ACCESS)
 {
-	if (argc < 1)
-		return true;
+if (argc < 1)
+return true;
 
-	WORD wIndex = atoi(argv[0]);
-	float fSpeed = (argc >= 2) ? (float)atof(argv[1]) : 1.0f;
+WORD wIndex = atoi(argv[0]);
+float fSpeed = (argc >= 2) ? (float)atof(argv[1]) : 1.0f;
 
-	pPlayer->Animation_PlaySimpleAnimation(wIndex, fSpeed);
+pPlayer->Animation_PlaySimpleAnimation(wIndex, fSpeed);
 
-	return false;
+return false;
 }
-
+*/
 
 void SendDungeonInfo(CPlayerWeenie* pPlayer, DungeonDesc_t* pInfo)
 {
@@ -2346,7 +2530,7 @@ CLIENT_COMMAND(player, "<command>", "Player commands.", BASIC_ACCESS)
 	else if (!stricmp(argv[0], "list"))
 	{
 		PlayerWeenieMap *pPlayers = g_pWorld->GetPlayers();
-		
+
 		std::string playerList = "Player List:";
 		for (auto &entry : *pPlayers)
 		{
@@ -2378,27 +2562,27 @@ CLIENT_COMMAND(player, "<command>", "Player commands.", BASIC_ACCESS)
 /*
 CLIENT_COMMAND(doomshard, "[palette=0xBF7]", "Spawns a doom shard.", BASIC_ACCESS)
 {
-	if (!SpawningEnabled(pPlayer))
-	{
-		return false;
-	}
+if (!SpawningEnabled(pPlayer))
+{
+return false;
+}
 
-	WORD palette = 0xBF7;
+WORD palette = 0xBF7;
 
-	if (argc >= 1)
-		palette = (unsigned short)strtoul(argv[0], NULL, 16);
+if (argc >= 1)
+palette = (unsigned short)strtoul(argv[0], NULL, 16);
 
-	CMonsterWeenie *pDoomShard = new CMonsterWeenie();
-	pDoomShard->SetSetupID(0x02000700);
-	pDoomShard->SetScale(1.6f);
-	pDoomShard->SetName("Doom Shard");
-	pDoomShard->SetInitialPosition(pPlayer->GetPosition());
+CMonsterWeenie *pDoomShard = new CMonsterWeenie();
+pDoomShard->SetSetupID(0x02000700);
+pDoomShard->SetScale(1.6f);
+pDoomShard->SetName("Doom Shard");
+pDoomShard->SetInitialPosition(pPlayer->GetPosition());
 
-	pDoomShard->m_miBaseModel.dwBasePalette = 0xBEF;
-	pDoomShard->m_miBaseModel.lPalettes.push_back(PaletteRpl(palette, 0x00, 0x00));
+pDoomShard->m_miBaseModel.dwBasePalette = 0xBEF;
+pDoomShard->m_miBaseModel.lPalettes.push_back(PaletteRpl(palette, 0x00, 0x00));
 
-	g_pWorld->CreateEntity(pDoomShard);
-	return false;
+g_pWorld->CreateEntity(pDoomShard);
+return false;
 }
 */
 
@@ -2431,7 +2615,7 @@ CLIENT_COMMAND(spawnsetup, "[id]", "Spawns something by setup ID using default p
 	{
 		return true;
 	}
-	
+
 	DWORD setupID = strtoul(argv[0], NULL, 16);
 	if (!(setupID & 0xFF000000))
 		setupID |= 0x02000000;
@@ -2506,7 +2690,7 @@ CLIENT_COMMAND(spawn2, "[name] [replacement index] [palette index] [shade from 0
 		ClothingTable::Release(pCT);
 		return false;
 	}
-	
+
 	float fScale = 1.0f;
 	bool bAnimate = false;
 
@@ -2705,12 +2889,58 @@ CLIENT_COMMAND(activeevents, "", "", ADMIN_ACCESS)
 	for (auto &entry : g_pGameEventManager->_gameEvents)
 	{
 		if (entry.second._eventState != GameEventState::Off_GameEventState)
-		{		
+		{
 			eventText += "\n";
 			eventText += entry.first;
 		}
 	}
 
+	pPlayer->SendText(eventText.c_str(), LTT_DEFAULT);
+	return false;
+}
+
+CLIENT_COMMAND(startevent, "[event]", "Starts an event.", BASIC_ACCESS)
+{
+	auto &events = g_pGameEventManager->_gameEvents;
+
+	std::string eventText = "Event started.";
+
+	std::string normalizedEventName = g_pGameEventManager->NormalizeEventName(argv[0]);
+
+	if (GameEventDef *eventDesc = events.lookup(normalizedEventName.c_str()))
+	{
+		if (eventDesc->_eventState != GameEventState::On_GameEventState)
+		{
+			eventDesc->_eventState = GameEventState::On_GameEventState;
+			g_pWorld->NotifyEventStarted(normalizedEventName.c_str());
+		}
+	}
+	else {
+		eventText = "Event already started.";
+	}
+	pPlayer->SendText(eventText.c_str(), LTT_DEFAULT);
+	return false;
+}
+
+CLIENT_COMMAND(stopevent, "[event]", "Stops an event.", BASIC_ACCESS)
+{
+	auto &events = g_pGameEventManager->_gameEvents;
+
+	std::string eventText = "Event stopped.";
+
+	std::string normalizedEventName = g_pGameEventManager->NormalizeEventName(argv[0]);
+
+	if (GameEventDef *eventDesc = events.lookup(normalizedEventName.c_str()))
+	{
+		if (eventDesc->_eventState != GameEventState::Off_GameEventState)
+		{
+			eventDesc->_eventState = GameEventState::Off_GameEventState;
+			g_pWorld->NotifyEventStopped(normalizedEventName.c_str());
+		}
+	}
+	else {
+		eventText = "Event not active.";
+	}
 	pPlayer->SendText(eventText.c_str(), LTT_DEFAULT);
 	return false;
 }
@@ -2776,7 +3006,7 @@ CLIENT_COMMAND(spawntreasure, "<tier>", "Spawn treasure of a specific tier", ADM
 
 	//pPlayer->SpawnTreasureInContainer(eTreasureCategory::TreasureCategory_Junk, 1, 3);
 
-	CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure(atoi(argv[0]), (eTreasureCategory)getRandomNumber(2, 8));
+	CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure(atoi(argv[0]), (eTreasureCategory)FastRNG.Next(2, 8));
 	//CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure(atoi(argv[0]), eTreasureCategory::TreasureCategory_Caster);
 
 	if (treasure)
@@ -2796,15 +3026,14 @@ CLIENT_COMMAND(spawntreasure2, "<tier> <num>", "Spawn treasure of a specific tie
 
 	int tier = atoi(argv[0]);
 	int num = atoi(argv[1]);
-
 	for (int i = 0; i < num; i++)
 	{
-		CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure(atoi(argv[0]), (eTreasureCategory)getRandomNumber(2, 8));
+		CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure(atoi(argv[0]), (eTreasureCategory)FastRNG.Next(2, 8));
 		//CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure(atoi(argv[0]), eTreasureCategory::TreasureCategory_Armor);
 
 		if (treasure)
 		{
-			treasure->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(Random::GenFloat(-2.0, 2.0), Random::GenFloat(-2.0, 2.0), 1.0)));
+			treasure->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(FastRNG.NextDouble(-2.0, 2.0), FastRNG.NextDouble(-2.0, 2.0), 1.0)));
 
 			if (!g_pWorld->CreateEntity(treasure))
 			{
@@ -2815,7 +3044,35 @@ CLIENT_COMMAND(spawntreasure2, "<tier> <num>", "Spawn treasure of a specific tie
 		else
 			continue;
 	}
+	return false;
+}
 
+CLIENT_COMMAND(spawntreasure3, "<tier> <num> <cat>", "Spawn treasure of a specific tier & category", ADMIN_ACCESS)
+{
+	if (argc < 3)
+		return true;
+
+	int tier = atoi(argv[0]);
+	int num = atoi(argv[1]);
+	int cat = atoi(argv[2]);
+	for (int i = 0; i < num; i++)
+	{
+		CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure((tier), (eTreasureCategory)cat);
+		//CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure(atoi(argv[0]), eTreasureCategory::TreasureCategory_Armor);
+
+		if (treasure)
+		{
+			treasure->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(FastRNG.NextDouble(-2.0, 2.0), FastRNG.NextDouble(-2.0, 2.0), 1.0)));
+
+			if (!g_pWorld->CreateEntity(treasure))
+			{
+				delete treasure;
+				return false;
+			}
+		}
+		else
+			continue;
+	}
 	return false;
 }
 
@@ -2900,6 +3157,43 @@ CLIENT_COMMAND(spawnwcidinv, "<name> [amount] [ptid] [shade]", "Spawn by wcid in
 
 	return false;
 }
+
+CLIENT_COMMAND(spawnjewelerytoinvbymatid, "<tier> <num> <mat>", "Spawn treasure by material", ADMIN_ACCESS)
+{
+	if (argc < 2)
+		return true;
+
+	int tier = atoi(argv[0]);
+	int num = atoi(argv[1]);
+	int mat = atoi(argv[2]);
+
+	if (pPlayer->GetAccessLevel() < SENTINEL_ACCESS)
+	{
+		pPlayer->SendText("You do not have access to this command.", LTT_DEFAULT);
+		return false;
+	}
+
+	for (int i = 0; i < num; i++)
+	{
+		CWeenieObject *treasure = g_pTreasureFactory->GenerateTreasure(atoi(argv[0]), eTreasureCategory::TreasureCategory_Jewelry);
+		treasure->m_Qualities.SetInt(MATERIAL_TYPE_INT, atoi(argv[2]));
+
+		if (treasure)
+		{
+			pPlayer->SpawnCloneInContainer(treasure, 1);
+			if (!g_pWorld->CreateEntity(treasure))
+			{
+				delete treasure;
+				return false;
+			}
+		}
+		else
+			continue;
+	}
+
+	return false;
+}
+
 
 CLIENT_COMMAND(spawnwcid, "<name> [ptid] [shade]", "Spawn by wcid.", ADMIN_ACCESS)
 {
@@ -3088,7 +3382,7 @@ CLIENT_COMMAND(spawnwcidgroup, "<name> [num]", "Spawn by wcid.", ADMIN_ACCESS)
 		return true;
 
 	int num = atoi(argv[1]);
-	
+
 	for (int i = 0; i < num; i++)
 	{
 		CWeenieObject *weenie;
@@ -3111,7 +3405,7 @@ CLIENT_COMMAND(spawnwcidgroup, "<name> [num]", "Spawn by wcid.", ADMIN_ACCESS)
 			break;
 		}
 
-		weenie->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(Random::GenFloat(-2.0, 2.0), Random::GenFloat(-2.0, 2.0), 1.0)));
+		weenie->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(FastRNG.NextDouble(-2.0, 2.0), FastRNG.NextDouble(-2.0, 2.0), 1.0)));
 
 		if (!g_pWorld->CreateEntity(weenie))
 			break;
@@ -3131,12 +3425,14 @@ void SpawnAllAppearancesForWeenie(CPlayerWeenie *pPlayer, DWORD wcid, bool bSpaw
 	}
 
 	DWORD clothing_did = 0;
+
+	DEBUG_DATA << "InqDataID (ClientCommands.cpp:3371): " << weenieDefs->m_WCID << " " << weenieDefs->m_Description << "... ";
 	if (!weenieDefs->m_Qualities.InqDataID(CLOTHINGBASE_DID, clothing_did))
 	{
 		if (bSpawnWithoutVariances)
 		{
 			CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(wcid, &pPlayer->m_Position, false);
-			weenie->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(Random::GenFloat(-10.0, 10.0), Random::GenFloat(-10.0, 10.0), 1.0)));
+			weenie->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(FastRNG.NextDouble(-10.0, 10.0), FastRNG.NextDouble(-10.0, 10.0), 1.0)));
 
 			if (setup_override)
 			{
@@ -3163,7 +3459,7 @@ void SpawnAllAppearancesForWeenie(CPlayerWeenie *pPlayer, DWORD wcid, bool bSpaw
 		CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(wcid, &pPlayer->m_Position, false);
 
 		weenie->m_Qualities.SetInt(PALETTE_TEMPLATE_INT, ptit->first);
-		weenie->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(Random::GenFloat(-30.0, 30.0), Random::GenFloat(-30.0, 30.0), 1.0)));
+		weenie->SetInitialPosition(pPlayer->m_Position.add_offset(Vector(FastRNG.NextDouble(-30.0, 30.0), FastRNG.NextDouble(-30.0, 30.0), 1.0)));
 
 		if (setup_override)
 		{
@@ -3200,7 +3496,7 @@ CLIENT_COMMAND(spawnwcidpts, "<name>", "Spawn all base appearances of a wcid.", 
 	{
 		weenieDefs = g_pWeenieFactory->GetWeenieDefaults(argv[0]);
 	}
-	
+
 	if (!weenieDefs)
 	{
 		pPlayer->SendText("Couldn't find that to spawn!", LTT_DEFAULT);
@@ -3242,6 +3538,11 @@ CLIENT_COMMAND(spawnweenieswithsamemotiontable, "<name>", "Spawn all setups with
 	}
 
 	DWORD motion_table_did = 0;
+
+
+
+	DEBUG_DATA << "InqDataID (ClientCommands.cpp:3487): " << weenieDefs->m_WCID << " " << weenieDefs->m_Description << "... ";
+
 	if (!weenieDefs->m_Qualities.InqDataID(MOTION_TABLE_DID, motion_table_did))
 	{
 		pPlayer->SendText("Does not have a motion table.", LTT_DEFAULT);
@@ -3313,6 +3614,9 @@ CLIENT_COMMAND(spawnsimilarsetups, "<name> <todonly>", "Spawn all setups with mo
 	}
 
 	DWORD setup_did = 0;
+
+	DEBUG_DATA << "InqDataID (ClientCommands.cpp:3561): " << weenieDefs->m_WCID << " " << weenieDefs->m_Description << "... ";
+
 	if (!weenieDefs->m_Qualities.InqDataID(SETUP_DID, setup_did))
 	{
 		pPlayer->SendText("Does not have a setup.", LTT_DEFAULT);
@@ -3399,25 +3703,25 @@ CLIENT_COMMAND(spawnavatarvendor, "[name]", "Spawn avatar vendor.", ADMIN_ACCESS
 /*
 CLIENT_COMMAND(spawnpyreal, "[name]", "Spawns pyreal.", BASIC_ACCESS)
 {
-	if (!SpawningEnabled(pPlayer))
-	{
-		return false;
-	}
+if (!SpawningEnabled(pPlayer))
+{
+return false;
+}
 
-	CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(273, &pPlayer->m_Position, false);
+CWeenieObject *weenie = g_pWeenieFactory->CreateWeenieByClassID(273, &pPlayer->m_Position, false);
 
-	if (!weenie)
-	{
-		pPlayer->SendText("Couldn't find that to spawn!", 1);
-		return false;
-	}
+if (!weenie)
+{
+pPlayer->SendText("Couldn't find that to spawn!", 1);
+return false;
+}
 
-	weenie->m_Qualities.SetInt(STACK_SIZE_INT, 25000);
-	weenie->m_Qualities.SetInt(MAX_STACK_SIZE_INT, 25000);
-	
-	g_pWorld->CreateEntity(weenie);
+weenie->m_Qualities.SetInt(STACK_SIZE_INT, 25000);
+weenie->m_Qualities.SetInt(MAX_STACK_SIZE_INT, 25000);
 
-	return false;
+g_pWorld->CreateEntity(weenie);
+
+return false;
 }
 */
 
@@ -3567,13 +3871,13 @@ CLIENT_COMMAND(spawnamuli, "[#] [#]", "Spawns an amuli variation.", BASIC_ACCESS
 			pItem->m_miWornModel.lModels.push_back(
 				ModelRpl(
 				(BYTE)pCB->objectEffects[i].partNum,
-				(WORD)pCB->objectEffects[i].objectID));
+					(WORD)pCB->objectEffects[i].objectID));
 
 			for (DWORD j = 0; j < pCB->objectEffects[i].numTextureEffects; j++)
 			{
 				pItem->m_miWornModel.lTextures.push_back(
 					TextureRpl(
-						(BYTE)pCB->objectEffects[i].partNum,
+					(BYTE)pCB->objectEffects[i].partNum,
 						(WORD)pCB->objectEffects[i].textureEffects[j].oldTexID,
 						(WORD)pCB->objectEffects[i].textureEffects[j].newTexID
 					));
@@ -3593,7 +3897,7 @@ CLIENT_COMMAND(spawnamuli, "[#] [#]", "Spawns an amuli variation.", BASIC_ACCESS
 	if (entry != pCT->_paletteTemplatesHash.end())
 	{
 		pItem->SetIcon(entry->second.iconID);
-		
+
 		for (DWORD i = 0; i < entry->second.numSubpalEffects; i++)
 		{
 			DWORD set = entry->second.subpalEffects[i].palSet;
@@ -3602,12 +3906,12 @@ CLIENT_COMMAND(spawnamuli, "[#] [#]", "Spawns an amuli variation.", BASIC_ACCESS
 			if (pPS)
 			{
 				DWORD pal = pPS->GetPaletteID(shade);
-				
+
 				for (DWORD j = 0; j < entry->second.subpalEffects[i].numRanges; j++)
 				{
 					pItem->m_miWornModel.lPalettes.push_back(
 						PaletteRpl(
-							(WORD)pal,
+						(WORD)pal,
 							entry->second.subpalEffects[i].rangeStart[j] >> 3,
 							entry->second.subpalEffects[i].rangeLength[j] >> 3
 						));
@@ -3782,10 +4086,10 @@ CLIENT_COMMAND(spawnrandom, "[num to spawn] [scale]", "Spawns random objects.", 
 		num = 0;
 	if (num >= 20)
 		num = 20;
-	
+
 	float fScale = 1.0f;
 	if (argc >= 2)
-		fScale = max(0.1, min(10, (float) atof(argv[1])));
+		fScale = max(0.1, min(10, (float)atof(argv[1])));
 
 	int total = num;
 
@@ -3802,7 +4106,7 @@ CLIENT_COMMAND(spawnrandom, "[num to spawn] [scale]", "Spawns random objects.", 
 		CWeenieObject *pMonster = g_pGameDatabase->CreateFromCapturedData(pMonsterInfo);
 
 		pMonster->SetScale(pMonsterInfo->physics.object_scale * fScale);
-		pMonster->SetInitialPosition(pPlayer->GetPosition().add_offset(Vector(Random::GenFloat(-2.0f * total, 2.0f * total), Random::GenFloat(-2.0f * total, 2.0f * total), 0)));
+		pMonster->SetInitialPosition(pPlayer->GetPosition().add_offset(Vector(FastRNG.NextDouble(-2.0f * total, 2.0f * total), FastRNG.NextDouble(-2.0f * total, 2.0f * total), 0)));
 
 		g_pWorld->CreateEntity(pMonster);
 
@@ -3854,14 +4158,14 @@ CLIENT_COMMAND(spawnrandomshadows, "[phase] [num to spawn]", "Spawns random shad
 	int total = num;
 	while (num > 0)
 	{
-		std::string spawnName = phase_monsters[phase-1][Random::GenInt(0, (unsigned int)(phase_monsters[phase-1].size() - 1))];
+		std::string spawnName = phase_monsters[phase - 1][FastRNG.Next(0, (unsigned int)(phase_monsters[phase - 1].size() - 1))];
 
 		CCapturedWorldObjectInfo *pMonsterInfo = g_pGameDatabase->GetCapturedMonsterData(spawnName.c_str());
 		if (pMonsterInfo)
 		{
 			CMonsterWeenie *pMonster = (CMonsterWeenie *)g_pGameDatabase->CreateFromCapturedData(pMonsterInfo);
 
-			Position spawnPos = pPlayer->GetPosition().add_offset(Vector(Random::GenFloat(-4.0f * total, 4.0f * total), Random::GenFloat(-4.0f * total, 4.0f * total), 0));
+			Position spawnPos = pPlayer->GetPosition().add_offset(Vector(FastRNG.NextDouble(-4.0f * total, 4.0f * total), FastRNG.NextDouble(-4.0f * total, 4.0f * total), 0));
 			pMonster->SetInitialPosition(spawnPos);
 
 			switch (phase)
@@ -4153,6 +4457,29 @@ CLIENT_COMMAND(givexpother, "[value]", "Gives you some XP for testing.", ADMIN_A
 	return false;
 }
 
+CLIENT_COMMAND(hover, "<on / off>", "Turns hovering on or off.", BASIC_ACCESS)
+{
+	if (pPlayer->InqIntQuality(HERITAGE_GROUP_INT, 0, true) != 9)
+	{
+		pPlayer->SendText("Command only available for Empyrean characters.", LTT_DEFAULT);
+		return false;
+	}
+
+	if (!_stricmp(argv[0], "on") || !_stricmp(argv[0], "1"))
+	{
+
+		pPlayer->SendText("Hovering on. You must relog for the change to take effect.", LTT_DEFAULT);
+		pPlayer->m_Qualities.SetDataID(MOTION_TABLE_DID, 0x9000207);
+	}
+	else if (!_stricmp(argv[0], "off") || !_stricmp(argv[0], "0"))
+	{
+		pPlayer->SendText("Hovering off. You must relog for the change to take effect.", LTT_DEFAULT);
+		pPlayer->m_Qualities.SetDataID(MOTION_TABLE_DID, 0x9000001);
+	}
+
+	return false;
+}
+
 const char* CommandBase::Info(CommandEntry* pCommand)
 {
 	const char* szName = pCommand->name;
@@ -4286,7 +4613,7 @@ bool CommandBase::Execute(char *command, CClient *client)
 			{
 				if (!pCommand->source || player_weenie)
 				{
-					LOG(Temp, Normal, "EXECUTING CLIENT COMMAND %s FROM %s\n", command, client->GetDescription());
+					SERVER_INFO << "EXECUTING CLIENT COMMAND" << command << "FROM" << client->GetDescription();
 
 					// run the command callback
 					if ((*pCommand->func)(client, player_weenie, player_physobj, argv + 1, argc - 1))

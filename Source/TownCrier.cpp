@@ -6,6 +6,7 @@
 #include "Player.h"
 #include "SpellCastingManager.h"
 #include "Config.h"
+#include "fastrand.h"
 
 CTownCrier::CTownCrier()
 {
@@ -39,7 +40,7 @@ std::string CTownCrier::GetNewsText(bool paid)
 	phrases.push_back("Has that 50,000 pyreal piece of armor been cluttering up your house chest for too long? Well, go to Shoushi, Yaraq, or Holtburg and sell it!");
 	phrases.push_back("Wait, you can't have this handful of blackened mineral! It's mine! If you want some for yourself, you'll have to get it on your own!");
 
-	return phrases[Random::GenInt(0, (DWORD)(phrases.size() - 1))];
+	return phrases[FastRNG.Next((DWORD)(phrases.size() - 1))];
 }
 
 int CTownCrier::DoUseResponse(CWeenieObject *player)

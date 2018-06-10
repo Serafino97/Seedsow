@@ -10,7 +10,7 @@ public:
 	virtual void Setup();
 	void Begin();
 
-	void PostCharge();
+	virtual void PostCharge();
 	void CheckTimeout();
 	void CancelMoveTo();
 
@@ -27,6 +27,7 @@ public:
 
 	CWeenieObject *GetTarget();
 	void MoveToAttack();
+	void TurnToAttack();
 
 	virtual void HandleMoveToDone(DWORD error);
 	virtual void HandleAttackHook(const AttackCone &cone) { }
@@ -55,6 +56,8 @@ public:
 	float _attack_speed = 1.5f;
 	float _fail_distance = 15.0f;
 	double _attack_charge_time = -1.0f;
+
+	bool m_bCanCharge = false;
 };
 
 class CMeleeAttackEvent : public CAttackEventData
@@ -92,6 +95,8 @@ class CMissileAttackEvent : public CAttackEventData
 public:
 	virtual void Setup() override;
 
+	virtual void PostCharge() override;
+
 	virtual void OnReadyToAttack() override;
 	virtual void OnAttackAnimSuccess(DWORD motion) override;
 	void Finish();
@@ -100,6 +105,7 @@ public:
 
 	void FireMissile();
 
+	void CalculateAttackMotion();
 	bool CalculateTargetPosition();
 	bool CalculateSpawnPosition(float missileRadius);	
 	bool CalculateMissileVelocity(bool track = true, bool gravity = true, float speed = 20.0f);
@@ -112,6 +118,7 @@ public:
 	Position _missile_target_position;
 	Vector _missile_velocity;
 	float _missile_dist_to_target = 0.0f;
+	bool m_bTurned;
 };
 
 class AttackManager

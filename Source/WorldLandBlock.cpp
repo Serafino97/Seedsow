@@ -73,20 +73,34 @@ void CWorldLandBlock::ClearOldDatabaseEntries()
 	std::list<unsigned int> weeniesList = g_pDBIO->GetWeeniesAt(m_wHeader);
 	for (auto entry : weeniesList)
 	{
-		bool stillExists = false;
-		for (auto &entity : m_EntityList)
+		try
 		{
-			if (entity->GetID() == entry)
+			bool stillExists = false;
+			for (auto &entity : m_EntityList)
 			{
-				stillExists = true;
-				break;
+				try
+				{
+					if (entity->GetID() == entry)
+					{
+						stillExists = true;
+						break;
+					}
+				}
+				catch (...)
+				{
+					SERVER_ERROR << "Error getting ID for " << entity;
+				}
+			}
+
+			if (!stillExists)
+			{
+				g_pDBIO->RemoveWeenieFromBlock(entry);
+				g_pDBIO->DeleteWeenie(entry);
 			}
 		}
-
-		if (!stillExists)
+		catch (...)
 		{
-			g_pDBIO->RemoveWeenieFromBlock(entry);
-			g_pDBIO->DeleteWeenie(entry);
+			SERVER_ERROR << "Failed to get data for " << entry;
 		}
 	}
 }
@@ -439,13 +453,15 @@ void CWorldLandBlock::Insert(CWeenieObject *pEntity, WORD wOld, BOOL bNew, bool 
 {
 	if (CPlayerWeenie *player = pEntity->AsPlayer())
 	{
+		Position pos = pEntity->GetPosition();
 		m_PlayerMap.insert(std::pair<DWORD, CPlayerWeenie *>(pEntity->GetID(), player));
 		m_PlayerList.push_back(player);
 
 		MakeNotDormant();
 
-		// spawn up adjacent landblocks
-		ActivateLandblocksWithinPVS(pEntity->GetLandcell());
+		// spawn up adjacent landblocks only if outdoors, otherwise only load the block you're on.
+		if ((pos.objcell_id & 0xFFFF) < 0x100) //outdoors
+			ActivateLandblocksWithinPVS(pEntity->GetLandcell());
 	}
 
 	m_EntityMap.insert(std::pair<DWORD, CWeenieObject *>(pEntity->GetID(), pEntity));
@@ -587,14 +603,13 @@ void CWorldLandBlock::ExchangePVS(CWeenieObject *pSource, WORD old_block_id)
 {
 	if (!pSource)
 		return;
-
+	
 	CWorldLandBlock *pBlock = pSource->GetBlock();
 	if (pBlock && (pSource->GetLandcell() & 0xFFFF) > 0x100) //if indoors only exchange data on this landblock.
 	{
-		pBlock->ExchangeData(pSource);
+			pBlock->ExchangeData(pSource);
 	}
 	else
-
 	{
 		// outdoor exchange -- this should eventually become obselete
 
@@ -789,6 +804,12 @@ void CWorldLandBlock::Destroy(CWeenieObject *pEntity, bool bDoRelease)
 	{
 		Release(pEntity);
 	}
+
+	//if generator_queue or registry, wipe generator_queue and registry
+	if (pEntity->m_Qualities._generator_registry && !pEntity->m_Qualities._generator_registry->_registry.empty())
+		pEntity->m_Qualities._generator_registry->_registry.clear();
+	if (pEntity->m_Qualities._generator_queue && !pEntity->m_Qualities._generator_queue->_queue.empty())
+		pEntity->m_Qualities._generator_queue->_queue.clear();
 
 	g_pWorld->EnsureRemoved(pEntity);
 

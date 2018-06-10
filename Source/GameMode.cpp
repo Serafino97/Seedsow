@@ -5,6 +5,7 @@
 #include "Player.h"
 #include "WeenieObject.h"
 #include "ChatMsgs.h"
+#include "fastrand.h"
 
 CGameMode::CGameMode()
 {
@@ -41,7 +42,7 @@ void CGameMode_Tag::Think()
 			return;
 		}
 
-		int index = Random::GenUInt(0, (unsigned int )(pPlayers->size() - 1));
+		int index = FastRNG.NextUInt(0, (unsigned int)(pPlayers->size() - 1));
 
 		CPlayerWeenie *pSelected = NULL;
 		int i = 0;

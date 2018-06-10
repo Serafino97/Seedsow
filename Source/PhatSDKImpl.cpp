@@ -25,10 +25,10 @@ public:
 		return g_pGlobals->Time();
 	}
 
-	double GetRandomFloat(double min, double max)
-	{
-		return Random::GenFloat(min, max);
-	}
+	//double GetRandomFloat(double min, double max)
+	//{
+	//	return Random::GenFloat(min, max);
+	//}
 
 	BYTE *GetPortalDataEntry(DWORD id, DWORD *length)
 	{

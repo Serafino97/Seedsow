@@ -43,7 +43,11 @@ public:
 	virtual void OnMotionDone(DWORD motion, BOOL success) override;
 	virtual void OnDeath(DWORD killer_id) override;
 	virtual void OnDealtDamage(DamageEventData &damageData) override;
+	std::map<DWORD, int> m_aDamageSources;
 	virtual void OnTookDamage(DamageEventData &damageData) override;
+	void UpdateDamageList(DamageEventData &damageData);
+	virtual void OnRegen(STypeAttribute2nd currentAttrib, int newAmount) override;
+	virtual void GivePerksForKill(CWeenieObject *pKilled) override;
 	virtual void OnIdentifyAttempted(CWeenieObject *other) override;
 	virtual void OnResistSpell(CWeenieObject *attacker) override;
 	virtual void OnEvadeAttack(CWeenieObject *attacker) override;
@@ -74,6 +78,8 @@ public:
 	virtual void GenerateDeathLoot(CCorpseWeenie *pCorpse);
 
 	virtual BOOL DoCollision(const class ObjCollisionProfile &prof);
+
+	virtual int AdjustHealth(int amount) override;
 
 	CCorpseWeenie *CreateCorpse(bool visible = true);
 

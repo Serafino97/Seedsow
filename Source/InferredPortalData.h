@@ -14,6 +14,7 @@ public:
 	class CCraftOperation *GetCraftOperation(DWORD source_wcid, DWORD dest_wcid);
 	Position *GetHousePortalDest(DWORD house_id, DWORD ignore_cell_id);
 	CMutationFilter *GetMutationFilter(DWORD id);
+	std::vector<std::string> GetBannedWords();
 
 	CRegionDescExtendedDataTable _regionData;
 	CSpellTableExtendedDataTable _spellTableData;
@@ -23,6 +24,7 @@ public:
 	CQuestDefDB _questDefDB;
 	std::unordered_map<DWORD, CMutationFilter *> _mutationFilters;
 	GameEventDefDB _gameEvents;
+	std::vector<std::string> _bannedWords;
 };
 
 

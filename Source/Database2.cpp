@@ -17,6 +17,7 @@
 #include "Vendor.h"
 #include "WeenieFactory.h"
 #include "DatabaseIO.h"
+#include "fastrand.h"
 
 CMYSQLResult::CMYSQLResult(MYSQL_RES *Result)
 {
@@ -94,7 +95,7 @@ CMYSQLConnection *CMYSQLConnection::Create(const char *host, unsigned int port, 
 
 		if (sqlconnection && connectTiming.GetElapsed() >= 1.0)
 		{
-			LOG(Database, Warning, "mysql_real_connect() took %.1f s!\n", connectTiming.GetElapsed());
+			SERVER_WARN << "mysql_real_connect() took" << connectTiming.GetElapsed();
 		}
 	}
 
@@ -122,19 +123,19 @@ CMYSQLConnection *CMYSQLConnection::Create(const char *host, unsigned int port, 
 
 			if (sqlconnection && connectTiming.GetElapsed() >= 1.0)
 			{
-				LOG(Database, Warning, "mysql_real_connect() re-attempt took %.1f s!\n", connectTiming.GetElapsed());
+				SERVER_WARN << "mysql_real_connect() re-attempt took" << connectTiming.GetElapsed();
 			}
 
 			if (sqlconnection == NULL)
 			{
-				LOG(Database, Warning, "Failed to create mysql connection after two tries:\n%s\n", mysql_error(sqlobject));
+				SERVER_WARN << "Failed to create mysql connection after two tries:" << mysql_error(sqlobject);
 
 				mysql_close(sqlobject);
 				return NULL;
 			}
 			else
 			{
-				LOG(Database, Normal, "Received EINTR while attempting to connect to mysql, but re-attempt succeeded.\n");
+				SERVER_WARN << "Received EINTR while attempting to connect to mysql, but re-attempt succeeded.";
 			}
 		}
 		else
@@ -142,7 +143,7 @@ CMYSQLConnection *CMYSQLConnection::Create(const char *host, unsigned int port, 
 			if (CSQLConnection::s_NumConnectAttempts > 1)
 			{
 				// Only show warning if not the first connection attempt
-				LOG(Database, Warning, "mysql_real_connect() failed:\n%s\n", mysql_error(sqlobject));
+				SERVER_WARN << "mysql_real_connect() failed:" << mysql_error(sqlobject);
 			}
 
 			mysql_close(sqlobject);
@@ -186,13 +187,13 @@ bool CMYSQLConnection::Query(const char *query)
 
 		if (queryTiming.GetElapsed() >= 1.0)
 		{
-			LOG(Database, Warning, "MYSQL query \"%s\" took %f seconds.\n", query, queryTiming.GetElapsed());
+			SERVER_WARN << "MYSQL query" << query << "took" << queryTiming.GetElapsed() << "seconds.";
 		}
 	}
 
 	if (errorCode != 0)
 	{
-		LOG(Database, Error, "MYSQL query errored %d for \"%s\"\n", errorCode, query);
+		SERVER_ERROR << "MYSQL query" << query << "errored" << errorCode;
 		return false;
 	}
 
@@ -227,10 +228,10 @@ std::string CMYSQLConnection::EscapeString(std::string unescaped)
 	{
 		return "";
 	}
-	
+
 	char *escaped = new char[(unescaped.length() * 2) + 1];
 	escaped[0] = '\0';
-	mysql_real_escape_string(m_InternalConnection, escaped, unescaped.c_str(), (DWORD) unescaped.length());
+	mysql_real_escape_string(m_InternalConnection, escaped, unescaped.c_str(), (DWORD)unescaped.length());
 
 	std::string result = escaped;
 	delete[] escaped;
@@ -434,7 +435,7 @@ bool CMYSQLSaveWeenieQuery::PerformQuery(MYSQL *c)
 {
 	if (!c)
 	{
-		LOG(Database, Error, "Cannot perform save query; no connection.\n");
+		SERVER_ERROR << "Cannot perform save query; no connection.";
 		return false;
 	}
 
@@ -442,7 +443,7 @@ bool CMYSQLSaveWeenieQuery::PerformQuery(MYSQL *c)
 
 	if (!statement)
 	{
-		LOG(Database, Error, "mysql_stmt_init() error on CreateOrUpdateWeenie for 0x%08X (%u bytes): %s\n", _weenie_id, _data_length, mysql_error(c));
+		SERVER_ERROR << "mysql_stmt_init() error on CreateOrUpdateWeenie for" << _weenie_id << "(" << _data_length << "):" << mysql_error(c);
 		return false;
 	}
 
@@ -453,7 +454,7 @@ bool CMYSQLSaveWeenieQuery::PerformQuery(MYSQL *c)
 	{
 		mysql_stmt_close(statement);
 
-		LOG(Database, Error, "mysql_stmt_prepare() error on CreateOrUpdateWeenie for 0x%08X (%u bytes): %s\n", _weenie_id, _data_length, mysql_error(c));
+		SERVER_ERROR << "mysql_stmt_prepare() error on CreateOrUpdateWeenie for" << _weenie_id << "(" << _data_length << "):" << mysql_error(c);
 		return false;
 	}
 
@@ -466,13 +467,13 @@ bool CMYSQLSaveWeenieQuery::PerformQuery(MYSQL *c)
 	{
 		mysql_stmt_close(statement);
 
-		LOG(Database, Error, "mysql_stmt_bind_param() error on CreateOrUpdateWeenie for 0x%08X (%u bytes): %s\n", _weenie_id, _data_length, mysql_error(c));
+		SERVER_ERROR << "mysql_stmt_bind_param() error on CreateOrUpdateWeenie for" << _weenie_id << "(" << _data_length << "):" << mysql_error(c);
 		return false;
 	}
 
 	if (mysql_stmt_execute(statement))
 	{
-		LOG(Database, Error, "mysql_stmt_execute() error on CreateOrUpdateWeenie for 0x%08X (%u bytes): %s\n", _weenie_id, _data_length, mysql_error(c));
+		SERVER_ERROR << "mysql_stmt_execute() error on CreateOrUpdateWeenie for" << _weenie_id << "(" << _data_length << "):" << mysql_error(c);
 		mysql_stmt_close(statement);
 
 		return false;
@@ -510,7 +511,7 @@ bool CMYSQLSaveHouseQuery::PerformQuery(MYSQL *c)
 {
 	if (!c)
 	{
-		LOG(Database, Error, "Cannot perform save query; no connection.\n");
+		SERVER_ERROR << "Cannot perform save query; no connection.";
 		return false;
 	}
 
@@ -518,7 +519,7 @@ bool CMYSQLSaveHouseQuery::PerformQuery(MYSQL *c)
 
 	if (!statement)
 	{
-		LOG(Database, Error, "mysql_stmt_init() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
+		SERVER_ERROR << "mysql_stmt_init() error on CreateOrUpdateHouseData for" << _house_id << "(" << _data_length << "):" << mysql_error(c);
 		return false;
 	}
 
@@ -529,7 +530,7 @@ bool CMYSQLSaveHouseQuery::PerformQuery(MYSQL *c)
 	{
 		mysql_stmt_close(statement);
 
-		LOG(Database, Error, "mysql_stmt_prepare() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
+		SERVER_ERROR << "mysql_stmt_prepare() error on CreateOrUpdateHouseData for" << _house_id << "(" << _data_length << "):" << mysql_error(c);
 		return false;
 	}
 
@@ -542,13 +543,13 @@ bool CMYSQLSaveHouseQuery::PerformQuery(MYSQL *c)
 	{
 		mysql_stmt_close(statement);
 
-		LOG(Database, Error, "mysql_stmt_bind_param() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
+		SERVER_ERROR << "mysql_stmt_bind_param() error on CreateOrUpdateHouseData for" << _house_id << "(" << _data_length << "):" << mysql_error(c);
 		return false;
 	}
 
 	if (mysql_stmt_execute(statement))
 	{
-		LOG(Database, Error, "mysql_stmt_execute() error on CreateOrUpdateHouseData for 0x%08X (%u bytes): %s\n", _house_id, _data_length, mysql_error(c));
+		SERVER_ERROR << "mysql_stmt_execute() error on CreateOrUpdateHouseData for" << _house_id << "(" << _data_length << "):" << mysql_error(c);
 		mysql_stmt_close(statement);
 
 		return false;
@@ -575,7 +576,7 @@ CMYSQLDatabase::CMYSQLDatabase(const char *host, unsigned int port, const char *
 	if (!m_pConnection || !m_pAsyncConnection)
 	{
 		// If we can't connect the first time, just disable this feature.
-		LOG(Database, Warning, "MySQL database functionality disabled.\n");
+		SERVER_WARN << "MySQL database functionality disabled.";
 		m_bDisabled = true;
 	}
 }
@@ -669,7 +670,7 @@ void CMYSQLDatabase::ProcessAsyncQueries()
 		{
 			break;
 		}
-		
+
 		if (queuedQuery->PerformQuery((MYSQL *)GetInternalAsyncConnection()))
 		{
 			delete queuedQuery;
@@ -679,6 +680,8 @@ void CMYSQLDatabase::ProcessAsyncQueries()
 			_asyncQueueLock.Lock();
 			_asyncQueries.push_front(queuedQuery);
 			_asyncQueueLock.Unlock();
+
+			SERVER_ERROR << "Errro while performing query:" << queuedQuery;
 
 			// there was an error, stop for now
 			break;
@@ -691,8 +694,8 @@ void CMYSQLDatabase::Tick()
 	/*
 	if ((m_fLastRefresh + 60.0) < g_pGlobals->Time())
 	{
-		// Refresh connection every 60 seconds to avoid stale connections.
-		RefreshConnection();
+	// Refresh connection every 60 seconds to avoid stale connections.
+	RefreshConnection();
 	}
 	*/
 }
@@ -767,7 +770,7 @@ void CGameDatabase::LoadBSD()
 	if (LoadDataFromFile("data/misc/bsd.dat", &data, &length))
 	{
 		BinaryReader reader(data, length);
-		
+
 		do
 		{
 			Position pos;
@@ -778,7 +781,7 @@ void CGameDatabase::LoadBSD()
 			m_BSDSpawns.push_back(pos);
 		} while (1);
 
-		delete [] data;
+		delete[] data;
 	}
 }
 
@@ -793,7 +796,7 @@ void CGameDatabase::SpawnBSD()
 
 		std::list<CWeenieObject *> results;
 		g_pWorld->EnumNearby(spawnPos, 10.0f, &results);
-		
+
 		bool bHasTusker = false;
 		for (auto &check : results)
 		{
@@ -858,7 +861,7 @@ void CGameDatabase::LoadAerfalle()
 			}
 		}
 
-		delete [] data;
+		delete[] data;
 	}
 }
 
@@ -885,13 +888,13 @@ void CGameDatabase::LoadStaticsData()
 		for (unsigned int i = 0; i < count; i++)
 		{
 			CCapturedWorldObjectInfo *pObjectInfo = new CCapturedWorldObjectInfo;
-			
+
 			reader.ReadString();
 			DWORD dwObjDataLen = reader.ReadDWORD(); // size of this
 
 			reader.ReadDWORD(); // 0xf745
 			pObjectInfo->guid = reader.ReadDWORD(); // GUID
-			
+
 			pObjectInfo->objdesc.UnPack(&reader);
 			pObjectInfo->physics.Unpack(reader);
 			pObjectInfo->weenie.UnPack(&reader);
@@ -957,14 +960,14 @@ void CGameDatabase::LoadStaticsData()
 				{
 					DEBUG_BREAK();
 				}
-			}			
+			}
 
 			reader.SetOffset(offsetStart + dwIDDataLen);
 
 			m_CapturedStaticsData.push_back(pObjectInfo);
 		}
 
-		delete [] data;
+		delete[] data;
 	}
 
 #if 1 // deprecated reimplement
@@ -1018,9 +1021,9 @@ void CGameDatabase::LoadStaticsData()
 		/*
 		if (pSpawnInfo->physics.movement_buffer)
 		{
-			pSpawn->m_AnimOverrideData = pSpawnInfo->physics.movement_buffer;
-			pSpawn->m_AnimOverrideDataLen = pSpawnInfo->physics.movement_buffer_length;
-			pSpawn->m_AutonomousMovement = pSpawnInfo->physics.autonomous_movement;
+		pSpawn->m_AnimOverrideData = pSpawnInfo->physics.movement_buffer;
+		pSpawn->m_AnimOverrideDataLen = pSpawnInfo->physics.movement_buffer_length;
+		pSpawn->m_AutonomousMovement = pSpawnInfo->physics.autonomous_movement;
 		}
 		*/
 
@@ -1043,11 +1046,11 @@ void CGameDatabase::LoadStaticsData()
 
 	if (!spawned)
 	{
-		LOG(Temp, Warning, "Spawn data not included. Spawning functionality may be limited.\n");
+		SERVER_WARN << "Spawn data not included. Spawning functionality may be limited.";
 	}
 	else
 	{
-		LOG(Temp, Normal, "Spawned %d persistent dynamic objects!\n", spawned);
+		SERVER_INFO << "Spawned" << spawned << "persistent dynamic objects!";
 	}
 }
 
@@ -1064,12 +1067,12 @@ void CGameDatabase::SpawnStaticsForLandBlock(WORD lb_gid)
 		if (pSpawnInfo->guid >= 0x80000000)
 		{
 			if (!strcmp(pSpawnInfo->weenie._name.c_str(), "Town Crier"))
-			{				
+			{
 			}
 			else
 				continue; // Dynamic perhaps
 
-			// make sure there isn't another one nearby
+						  // make sure there isn't another one nearby
 			std::list<CWeenieObject *> results;
 			g_pWorld->EnumNearby(pSpawnInfo->physics.pos, 4.0f, &results);
 
@@ -1155,7 +1158,7 @@ void CGameDatabase::SpawnStaticsForLandBlock(WORD lb_gid)
 		*/
 
 		pSpawn->m_bDontClear = true;
-		
+
 		DWORD weenieHeader = 0;
 		pSpawnInfo->weenie.set_pack_header(&weenieHeader);
 
@@ -1184,12 +1187,12 @@ void CGameDatabase::SpawnStaticsForLandBlock(WORD lb_gid)
 
 		if (pSpawnInfo->physics.bitfield & PhysicsDescInfo::TRANSLUCENCY)
 			pSpawn->m_fTranslucency = pSpawnInfo->physics.translucency;
-				
+
 		// Make attackable
 		/*
 		if (pSpawn->IsMonsterWeenie())
 		{
-			pSpawn->SetInitialPhysicsState(pSpawnInfo->physics.state & ~(REPORT_COLLISIONS_AS_ENVIRONMENT_PS));
+		pSpawn->SetInitialPhysicsState(pSpawnInfo->physics.state & ~(REPORT_COLLISIONS_AS_ENVIRONMENT_PS));
 		}
 		*/
 
@@ -1198,8 +1201,8 @@ void CGameDatabase::SpawnStaticsForLandBlock(WORD lb_gid)
 		/*
 		if (pSpawn->IsMonsterWeenie())
 		{
-			CMonsterWeenie *pMonster = (CMonsterWeenie *)pSpawn;
-			pMonster->m_MonsterAI = new MonsterAIManager(pMonster, pMonster->m_Position);
+		CMonsterWeenie *pMonster = (CMonsterWeenie *)pSpawn;
+		pMonster->m_MonsterAI = new MonsterAIManager(pMonster, pMonster->m_Position);
 		}
 		*/
 #endif
@@ -1208,11 +1211,11 @@ void CGameDatabase::SpawnStaticsForLandBlock(WORD lb_gid)
 
 CCapturedWorldObjectInfo *CGameDatabase::GetRandomCapturedMonsterData()
 {
-	DWORD numMonsters = (DWORD) m_CapturedMonsterDataList.size();
+	DWORD numMonsters = (DWORD)m_CapturedMonsterDataList.size();
 	if (numMonsters < 1)
 		return NULL;
 
-	unsigned int monster = Random::GenUInt(0, numMonsters - 1);
+	unsigned int monster = FastRNG.NextUInt(0, numMonsters - 1);
 
 	return m_CapturedMonsterDataList[monster];
 }
@@ -1402,7 +1405,7 @@ void CGameDatabase::LoadCapturedMonsterData()
 
 				if (flags & Packed_CreatureProfile)
 				{
-					DWORD flags = idReader.ReadDWORD();					
+					DWORD flags = idReader.ReadDWORD();
 				}
 			}
 
@@ -1416,20 +1419,20 @@ void CGameDatabase::LoadCapturedMonsterData()
 			}
 		}
 
-		delete [] data;
+		delete[] data;
 	}
 }
 
 CCapturedWorldObjectInfo *CGameDatabase::GetRandomCapturedItemData()
 {
-	DWORD numItems = (DWORD) m_CapturedItemDataList.size();
+	DWORD numItems = (DWORD)m_CapturedItemDataList.size();
 
 	if (numItems < 1)
 	{
 		return NULL;
 	}
 
-	unsigned int Item = Random::GenUInt(0, numItems - 1);
+	unsigned int Item = FastRNG.NextUInt(0, numItems - 1);
 
 	return m_CapturedItemDataList[Item];
 }
@@ -1587,18 +1590,18 @@ void CGameDatabase::LoadCapturedItemData()
 			}
 		}
 
-		delete [] data;
+		delete[] data;
 	}
 }
 
 
 CCapturedWorldObjectInfo *CGameDatabase::GetRandomCapturedArmorData()
 {
-	DWORD numItems = (DWORD) m_CapturedArmorDataList.size();
+	DWORD numItems = (DWORD)m_CapturedArmorDataList.size();
 	if (numItems < 1)
 		return NULL;
 
-	unsigned int Item = Random::GenUInt(0, numItems - 1);
+	unsigned int Item = FastRNG.NextUInt(0, numItems - 1);
 	return m_CapturedArmorDataList[Item];
 }
 
@@ -1754,37 +1757,37 @@ void CGameDatabase::LoadCapturedArmorData()
 
 			/*
 			{
-				reader.ReadBYTE();
-				numPalette = reader.ReadBYTE();
-				numTex = reader.ReadBYTE();
-				numModel = reader.ReadBYTE();
+			reader.ReadBYTE();
+			numPalette = reader.ReadBYTE();
+			numTex = reader.ReadBYTE();
+			numModel = reader.ReadBYTE();
 
-				if (numPalette)
-				{
-					pItemInfo->wornAppearance.dwBasePalette = reader.ReadPackedDWORD(); // actually packed, fix this
-					for (int j = 0; j < numPalette; j++)
-					{
-						DWORD replacement = reader.ReadPackedDWORD(); // actually packed, fix this
-						BYTE offset = reader.ReadBYTE();
-						BYTE range = reader.ReadBYTE();
-						pItemInfo->wornAppearance.lPalettes.push_back(PaletteRpl(replacement, offset, range));
-					}
-				}
+			if (numPalette)
+			{
+			pItemInfo->wornAppearance.dwBasePalette = reader.ReadPackedDWORD(); // actually packed, fix this
+			for (int j = 0; j < numPalette; j++)
+			{
+			DWORD replacement = reader.ReadPackedDWORD(); // actually packed, fix this
+			BYTE offset = reader.ReadBYTE();
+			BYTE range = reader.ReadBYTE();
+			pItemInfo->wornAppearance.lPalettes.push_back(PaletteRpl(replacement, offset, range));
+			}
+			}
 
-				for (int j = 0; j < numTex; j++)
-				{
-					BYTE index = reader.ReadBYTE();
-					DWORD oldT = reader.ReadPackedDWORD();
-					DWORD newT = reader.ReadPackedDWORD();
-					pItemInfo->wornAppearance.lTextures.push_back(TextureRpl(index, oldT, newT));
-				}
+			for (int j = 0; j < numTex; j++)
+			{
+			BYTE index = reader.ReadBYTE();
+			DWORD oldT = reader.ReadPackedDWORD();
+			DWORD newT = reader.ReadPackedDWORD();
+			pItemInfo->wornAppearance.lTextures.push_back(TextureRpl(index, oldT, newT));
+			}
 
-				for (int j = 0; j < numModel; j++)
-				{
-					BYTE index = reader.ReadBYTE();
-					DWORD newM = reader.ReadPackedDWORD();
-					pItemInfo->wornAppearance.lModels.push_back(ModelRpl(index, newM));
-				}
+			for (int j = 0; j < numModel; j++)
+			{
+			BYTE index = reader.ReadBYTE();
+			DWORD newM = reader.ReadPackedDWORD();
+			pItemInfo->wornAppearance.lModels.push_back(ModelRpl(index, newM));
+			}
 			}
 			*/
 
@@ -1794,7 +1797,7 @@ void CGameDatabase::LoadCapturedArmorData()
 			m_CapturedArmorDataList.push_back(pItemInfo);
 		}
 
-		delete [] data;
+		delete[] data;
 	}
 }
 
@@ -1838,7 +1841,7 @@ void CGameDatabase::LoadTeleTownList()
 			}
 
 #ifndef PUBLIC_BUILD
-			LOG(World, Normal, "Added %d teleport locations.\n", Result->ResultRows());
+			SERVER_INFO << "Added" << Result->ResultRows() << "teleport locations.";
 #endif
 			delete Result;
 		}
@@ -1891,7 +1894,7 @@ CWeenieObject *CGameDatabase::CreateFromCapturedData(CCapturedWorldObjectInfo *p
 	pObject->m_Qualities.SetInt(CLOTHING_PRIORITY_INT, pObjectInfo->weenie._priority);
 
 	pObject->m_Qualities.SetInt(SHOWABLE_ON_RADAR_INT, pObjectInfo->weenie._radar_enum);
-	pObject->SetRadarBlipColor((RadarBlipEnum) pObjectInfo->weenie._blipColor);
+	pObject->SetRadarBlipColor((RadarBlipEnum)pObjectInfo->weenie._blipColor);
 	pObject->m_Qualities.SetInt(TARGET_TYPE_INT, pObjectInfo->weenie._targetType);
 	pObject->m_Qualities.id = pObjectInfo->weenie._wcid;
 	// pObject->m_PhysicsState = pObjectInfo->physics.state;
@@ -1926,7 +1929,7 @@ CWeenieObject *CGameDatabase::CreateFromCapturedData(CCapturedWorldObjectInfo *p
 
 				double shade = 1.0;
 
-				pCT->BuildObjDesc(0x02000001, paletteKey, &ShadePackage(Random::GenFloat(0.0, 1.0)), &pItem->m_WornObjDesc);
+				pCT->BuildObjDesc(0x02000001, paletteKey, &ShadePackage(FastRNG.NextDouble()), &pItem->m_WornObjDesc);
 
 				// use the original palettes specified?		
 				pItem->m_WornObjDesc.ClearSubpalettes();
@@ -1941,8 +1944,8 @@ CWeenieObject *CGameDatabase::CreateFromCapturedData(CCapturedWorldObjectInfo *p
 				Subpalette *pSPC = od.firstSubpal;
 				while (pSPC)
 				{
-					pItem->m_miWornModel.lPalettes.push_back(PaletteRpl((WORD)pSPC->subID, pSPC->offset >> 3, pSPC->numcolors >> 3));
-					pSPC = pSPC->next;
+				pItem->m_miWornModel.lPalettes.push_back(PaletteRpl((WORD)pSPC->subID, pSPC->offset >> 3, pSPC->numcolors >> 3));
+				pSPC = pSPC->next;
 				}
 				*/
 

@@ -3,6 +3,7 @@
 #include "WeenieObject.h"
 #include "Healer.h"
 #include "Player.h"
+#include "fastrand.h"
 
 CHealerWeenie::CHealerWeenie()
 {
@@ -45,8 +46,8 @@ void CHealerUseEvent::OnReadyToUse()
 	}
 	else
 	{
-		// TODO find the right animation for healing another player
-		ExecuteUseAnimation(Motion_SkillHealSelf);
+		// TODO find the right animation for healing another player - using Woah animation now, seems right.
+		ExecuteUseAnimation(Motion_Woah);
 	}
 }
 
@@ -95,7 +96,7 @@ void CHealerUseEvent::OnUseAnimSuccess(DWORD motion)
 					DWORD heal_min = (int)(healing_skill * 0.2) * tool->InqFloatQuality(HEALKIT_MOD_FLOAT, 1.0);
 					DWORD heal_max = (int)(healing_skill * 0.5) * tool->InqFloatQuality(HEALKIT_MOD_FLOAT, 1.0);
 
-					amountHealed = Random::GenInt(heal_min, heal_max);
+					amountHealed = FastRNG.Next(heal_min, heal_max);
 					if (amountHealed > missingVital)
 						amountHealed = missingVital;
 
@@ -110,7 +111,7 @@ void CHealerUseEvent::OnUseAnimSuccess(DWORD motion)
 					}
 					_weenie->AdjustStamina(-staminaNecessary);
 
-					success = Random::RollDice(0.0, 1.0) <= GetSkillChance(healing_skill, difficulty);
+					success = FastRNG.NextDouble() <= GetSkillChance(healing_skill, difficulty);
 					if (success)
 					{
 						if (amountHealed > (int)(heal_max * 0.8))
@@ -121,8 +122,17 @@ void CHealerUseEvent::OnUseAnimSuccess(DWORD motion)
 						int statChange = newStatValue - statValue;
 						if (statChange)
 						{
-							target->m_Qualities.SetAttribute2nd(statType, newStatValue);
-							target->NotifyAttribute2ndStatUpdated(statType);
+							if (target->AsPlayer() && statType == HEALTH_ATTRIBUTE_2ND)
+							{
+								target->AdjustHealth(statChange);
+								target->NotifyAttribute2ndStatUpdated(statType);
+							}
+							else
+							{
+								target->m_Qualities.SetAttribute2nd(statType, newStatValue);
+								target->NotifyAttribute2ndStatUpdated(statType);
+							}
+
 						}
 					}
 
@@ -158,6 +168,16 @@ void CHealerUseEvent::OnUseAnimSuccess(DWORD motion)
 
 					target->SendText(csprintf("%s heals you for %d %s points.", _weenie->GetName().c_str(), amountHealed, vitalName), LTT_DEFAULT);
 				}
+
+				if (boost_stat == HEALTH_ATTRIBUTE_2ND)
+				{
+					if (_weenie->AsPlayer())
+					{
+						// update the target's health on the healing player asap
+						((CPlayerWeenie*)_weenie)->RefreshTargetHealth();
+					}
+				}
+
 			}
 			else
 			{

@@ -284,6 +284,26 @@ DWORD ExperienceSystem::ExperienceToSkillLevel(SKILL_ADVANCEMENT_CLASS sac, DWOR
 	return UINT_MAX;
 }
 
+DWORD ExperienceSystem::ExperienceToAttributeLevel(DWORD level)
+{
+	if (ExperienceTable *pExpTable = GetExperienceTable())
+	{
+		return pExpTable->GetExperienceForLevel(ExperienceType::Attribute_ExperienceType, level);
+	}
+
+	return 0;
+}
+
+DWORD ExperienceSystem::ExperienceToAttribute2ndLevel(DWORD level)
+{
+	if (ExperienceTable *pExpTable = GetExperienceTable())
+	{
+		return pExpTable->GetExperienceForLevel(ExperienceType::Attribute2nd_ExperienceType, level);
+	}
+
+	return 0;
+}
+
 DWORD ExperienceSystem::GetMaxTrainedSkillLevel()
 {
 	if (ExperienceTable *pExpTable = GetExperienceTable())
@@ -299,6 +319,26 @@ DWORD ExperienceSystem::GetMaxSpecializedSkillLevel()
 	if (ExperienceTable *pExpTable = GetExperienceTable())
 	{
 		return pExpTable->_max_specialized_skill_level;
+	}
+
+	return 0;
+}
+
+DWORD ExperienceSystem::GetMaxAttributeLevel()
+{
+	if (ExperienceTable *pExpTable = GetExperienceTable())
+	{
+		return pExpTable->_max_attribute_level;
+	}
+
+	return 0;
+}
+
+DWORD ExperienceSystem::GetMaxAttribute2ndLevel()
+{
+	if (ExperienceTable *pExpTable = GetExperienceTable())
+	{
+		return pExpTable->_max_attribute2nd_level;
 	}
 
 	return 0;

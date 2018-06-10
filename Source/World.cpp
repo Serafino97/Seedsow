@@ -14,11 +14,12 @@
 #include "Config.h"
 #include "Server.h"
 #include "House.h"
+#include "fastrand.h"
 
 CWorld::CWorld()
 {
-	LOG(Temp, Normal, "Initializing World..\n");
-
+	WINLOG(Temp, Normal, "Initializing World..\n");
+	SERVER_INFO << "Initializing World..";
 	ZeroMemory(m_pBlocks, sizeof(m_pBlocks));
 
 	LoadDungeonsFile();
@@ -37,7 +38,7 @@ void CWorld::SaveWorld()
 {
 	SaveDungeonsFile();
 
-	if(g_pHouseManager)
+	if (g_pHouseManager)
 		g_pHouseManager->Save();
 }
 
@@ -101,7 +102,7 @@ Position CWorld::FindDungeonDrop()
 	}
 
 	LocationMap::iterator dit = m_mDungeons.begin();
-	long index = Random::GenUInt(0, (long)m_mDungeons.size() - 1);
+	long index = FastRNG.NextUInt(0, (long)m_mDungeons.size() - 1);
 	while (index > 0) {
 		index--;
 		dit++;
@@ -309,7 +310,7 @@ CWorldLandBlock *CWorld::ActivateBlock(WORD wHeader)
 	pBlock = *ppBlock;
 	if (pBlock != NULL)
 	{
-		LOG(Temp, Normal, "Landblock already active!\n");
+		SERVER_INFO << "Landblock already active!";
 		return pBlock;
 	}
 #endif
@@ -341,11 +342,36 @@ bool CWorld::CreateEntity(CWeenieObject *pEntity, bool bMakeAware)
 		{
 			LOG_PRIVATE(World, Warning, "Trying to spawn second (different) weenie with existing ID 0x%08X! Deleting instead.\n", pEntity->GetID());
 
-			// Already exists.
-			delete pEntity;
+			if (pExistingWeenie->IsContained())
+			{
+				CContainerWeenie *pContainer = (CContainerWeenie*)FindObject(pExistingWeenie->GetContainerID());
+
+				if (pContainer && pContainer->AsCorpse())
+				{
+					// The dupe is in a corpse!
+					// Let's assume the corpse was already recovered.
+
+					while (pContainer->m_Items.size() > 0)
+					{
+						pContainer->m_Items[0]->Remove();
+					}
+
+					// Corpse is now empty. We can get rid of it.
+					pContainer->Remove();
+				}
+				else
+				{
+					delete pEntity;
+					return false;
+				}
+			}
+			else
+			{
+				delete pEntity;
+				return false;
+			}
 		}
 
-		return false;
 	}
 
 	double createTime;
@@ -428,7 +454,7 @@ bool CWorld::CreateEntity(CWeenieObject *pEntity, bool bMakeAware)
 	}
 
 #ifdef _DEBUG
-	LOG(World, Verbose, "Spawned ID 0x%08X \"%s\" memory object @ 0x%I64X\n", pEntity->GetID(), pEntity->GetName().c_str(), (DWORD64)pEntity);
+	DEBUG_DATA << "Spawned ID" << pEntity->GetID() << "- " << pEntity->GetName().c_str() << "memory object @" << (DWORD64)pEntity;
 #endif
 
 	return true;
@@ -582,7 +608,7 @@ CWeenieObject *CWorld::FindObject(DWORD object_id, bool allowLandblockActivation
 			cellId = pos.objcell_id;
 		if (!cellId && weenie->m_Qualities.InqPosition(INSTANTIATION_POSITION, pos))
 			cellId = pos.objcell_id;
-			
+
 		if (cellId)
 		{
 			WORD header = (cellId >> 16);
@@ -599,8 +625,8 @@ CWeenieObject *CWorld::FindObject(DWORD object_id, bool allowLandblockActivation
 		}
 		delete weenie;
 	}
-	
-	if(result == m_mAllObjects.end())
+
+	if (result == m_mAllObjects.end())
 		return NULL;
 	return result->second;
 }
@@ -729,7 +755,7 @@ void CWorld::BroadcastPVS(CWeenieObject *weenie, void *_data, DWORD _len, WORD _
 		return;
 
 	if (weenie->IsContained() ||
-	   (weenie->IsEquipped() && weenie->InqIntQuality(PARENT_LOCATION_INT, 0) == 0)) //we're equipped but we dont have a physical presence in the world, make sure to include us here.
+		(weenie->IsEquipped() && weenie->InqIntQuality(PARENT_LOCATION_INT, 0) == 0)) //we're equipped but we dont have a physical presence in the world, make sure to include us here.
 	{
 		DWORD topLevelID = weenie->GetTopLevelID();
 		if (topLevelID != weenie->GetID() && ignore_ent != topLevelID)
@@ -744,7 +770,7 @@ void CWorld::BroadcastPVS(CWeenieObject *weenie, void *_data, DWORD _len, WORD _
 				{
 					CWeenieObject *openedBy = FindObject(owner->AsContainer()->_openedById);
 
-					if(openedBy)
+					if (openedBy)
 						openedBy->SendNetMessage(_data, _len, _group, _game_event);
 				}
 			}
@@ -835,38 +861,45 @@ void CWorld::BroadcastGlobal(void *_data, DWORD _len, WORD _group, DWORD ignore_
 	}
 }
 
+void CWorld::BroadcastLocal(DWORD cellid, std::string text)
+{
+	BinaryWriter *textMsg = ServerText(text.c_str(), LTT_DEFAULT);
+	g_pWorld->BroadcastPVS(cellid, textMsg->GetData(), textMsg->GetSize(), PRIVATE_MSG, 0, false);
+	delete textMsg;
+}
+
 void CWorld::Test()
 {
-	LOG(Temp, Normal, "<CWorld::Test()>\n");
-	LOG(Temp, Normal, "Portal: v%lu, %lu files.\n", g_pPortal->GetVersion(), g_pPortal->GetFileCount());
-	LOG(Temp, Normal, "Cell: v%lu, %u files.\n", g_pCell->GetVersion(), g_pCell->GetFileCount());
-	LOG(Temp, Normal, "%u objects", m_mAllObjects.size());
-	LOG(Temp, Normal, "%u players:\n", m_mAllPlayers.size());
+	WINLOG(Temp, Normal, "<CWorld::Test()>\n");
+	WINLOG(Temp, Normal, "Portal: v%lu, %lu files.\n", g_pPortal->GetVersion(), g_pPortal->GetFileCount());
+	WINLOG(Temp, Normal, "Cell: v%lu, %u files.\n", g_pCell->GetVersion(), g_pCell->GetFileCount());
+	WINLOG(Temp, Normal, "%u objects", m_mAllObjects.size());
+	WINLOG(Temp, Normal, "%u players:\n", m_mAllPlayers.size());
 	for (PlayerWeenieMap::iterator pit = m_mAllPlayers.begin(); pit != m_mAllPlayers.end(); pit++)
 	{
 		CPlayerWeenie *pPlayer = pit->second;
-		LOG(Temp, Normal, "%08X %s\n", pPlayer->GetID(), pPlayer->GetName().c_str());
+		WINLOG(Temp, Normal, "%08X %s\n", pPlayer->GetID(), pPlayer->GetName().c_str());
 	}
-	LOG(Temp, Normal, "%u active blocks:\n", m_vBlocks.size());
+	WINLOG(Temp, Normal, "%u active blocks:\n", m_vBlocks.size());
 	for (LandblockVector::iterator it = m_vBlocks.begin(); it != m_vBlocks.end(); it++)
 	{
 		CWorldLandBlock *pBlock = *it;
-		LOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
+		WINLOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
 	}
-	LOG(Temp, Normal, "%u dormant blocks:\n", m_mDormantBlocks.size());
+	WINLOG(Temp, Normal, "%u dormant blocks:\n", m_mDormantBlocks.size());
 	for (LandblockMap::iterator it = m_mDormantBlocks.begin(); it != m_mDormantBlocks.end(); it++)
 	{
 		CWorldLandBlock *pBlock = it->second;
-		LOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
+		WINLOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
 	}
-	LOG(Temp, Normal, "%u unloaded blocks:\n", m_mUnloadedBlocks.size());
+	WINLOG(Temp, Normal, "%u unloaded blocks:\n", m_mUnloadedBlocks.size());
 	for (LandblockMap::iterator it = m_mUnloadedBlocks.begin(); it != m_mUnloadedBlocks.end(); it++)
 	{
 		CWorldLandBlock *pBlock = it->second;
-		LOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
+		WINLOG(Temp, Normal, "%04X %u players %u entities\n", pBlock->GetHeader(), pBlock->PlayerCount(), pBlock->LiveCount());
 	}
 
-	LOG(Temp, Normal, "</CWorld::Test()>\n");
+	WINLOG(Temp, Normal, "</CWorld::Test()>\n");
 }
 
 void CWorld::RemoveEntity(CWeenieObject *pEntity)
@@ -920,7 +953,7 @@ void CWorld::EnsureRemoved(CWeenieObject *pEntity)
 	if (pEntity->m_Qualities.InqString(GENERATOR_EVENT_STRING, eventString))
 	{
 		auto range_pair = _eventWeenies.equal_range(eventString);
-		
+
 		for (auto it = range_pair.first; it != range_pair.second; ++it) {
 			if (it->second == pEntity->GetID()) {
 				_eventWeenies.erase(it);
@@ -1107,7 +1140,7 @@ void CWorld::EnumNearby(const Position &position, float fRange, std::list<CWeeni
 	WORD cell = CELL_WORD(dwCell);
 
 	CWorldLandBlock *pBlock = m_pBlocks[block];
-	if (pBlock && (dwCell & 0xFFFF) > 0x100) //check if inside
+	if ((pBlock && (dwCell & 0xFFFF) > 0x100) || pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 	{
 		pBlock->EnumNearby(position, fRange, pResults);
 	}
@@ -1157,7 +1190,7 @@ void CWorld::EnumNearbyPlayers(const Position &position, float fRange, std::list
 	WORD cell = CELL_WORD(dwCell);
 
 	CWorldLandBlock *pBlock = m_pBlocks[block];
-	if (pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell))
+	if ((pBlock && (dwCell & 0xFFFF) > 0x100) || pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 	{
 		pBlock->EnumNearbyPlayers(position, fRange, pResults);
 	}
@@ -1234,7 +1267,7 @@ void CWorld::EnumNearby(CWeenieObject *pSource, float fRange, std::list<CWeenieO
 		WORD cell = CELL_WORD(dwCell);
 
 		CWorldLandBlock *pBlock = m_pBlocks[block];
-		if (pBlock && (dwCell & 0xFFFF) > 0x100) //check if inside
+		if ((pBlock && (dwCell & 0xFFFF) > 0x100) || pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 		{
 			pBlock->EnumNearby(pSource, fRange, pResults);
 		}
@@ -1286,7 +1319,7 @@ void CWorld::EnumNearbyPlayers(CWeenieObject *pSource, float fRange, std::list<C
 		WORD cell = CELL_WORD(dwCell);
 
 		CWorldLandBlock *pBlock = m_pBlocks[block];
-		if (pBlock && (dwCell & 0xFFFF) > 0x100) //check if inside
+		if ((pBlock && (dwCell & 0xFFFF) > 0x100) || pBlock && !pBlock->PossiblyVisibleToOutdoors(dwCell)) //check if inside
 		{
 			pBlock->EnumNearbyPlayers(pSource, fRange, pResults);
 		}
