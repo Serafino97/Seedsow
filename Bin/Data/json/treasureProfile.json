@@ -215,7 +215,7 @@
 
       "materialsCeramic": [ "ceramic", "porcelain" ],
       "materialsCloth": [ "wool", "linen", "silk", "satin", "velvet" ],
-      "materialsGem": [ "onyx", "turquoise", "whiteQuartz", "amber", "moonstone", "agate", "azurite", "bloodstone", "carnelian", "citrine", "hematite", "lapisLazuli", "lavenderJade", "malachite", "RedJade", "roseQuartz", "smokeyQuartz", "amethyst", "greenJade", "tourmaline", "whiteJade", "yellowGarnet", "zircon", "blackGarnet", "jet", "redGarnet", "yellowTopaz", "peridot", "aquamarine", "greenGarnet", "opal", "imperialTopaz", "whiteSapphire", "blackOpal", "fireOpal", "sunstone", "ivory" ],
+      "materialsGem": [ "onyx", "tigerEye", "turquoise", "whiteQuartz", "amber", "moonstone", "agate", "azurite", "bloodstone", "carnelian", "citrine", "hematite", "lapisLazuli", "lavenderJade", "malachite", "RedJade", "roseQuartz", "smokeyQuartz", "amethyst", "greenJade", "tourmaline", "whiteJade", "yellowGarnet", "zircon", "blackGarnet", "jet", "redGarnet", "yellowTopaz", "peridot", "aquamarine", "greenGarnet", "opal", "ivory" ],
       "materialsLeather": [ "leather", "armoredilloHide", "reedSharkHide", "gromnieHide" ],
       "materialsMetal": [ "bronze", "steel", "copper", "gold", "silver", "brass", "iron" ],
       "materialsStone": [ "sandstone", "alabaster", "granite", "marble", "obsidian", "serpentine" ],
@@ -286,10 +286,10 @@
 
       "materialsCeramic": [ "ceramic", "porcelain" ],
       "materialsCloth": [ "wool", "linen", "silk", "satin", "velvet" ],
-      "materialsGem": [ "onyx", "turquoise", "whiteQuartz", "amber", "moonstone", "agate", "azurite", "bloodstone", "carnelian", "citrine", "hematite", "lapisLazuli", "lavenderJade", "malachite", "RedJade", "roseQuartz", "smokeyQuartz", "amethyst", "greenJade", "tourmaline", "whiteJade", "yellowGarnet", "zircon", "blackGarnet", "jet", "redGarnet", "yellowTopaz", "peridot", "aquamarine", "greenGarnet", "opal", "imperialTopaz", "whiteSapphire", "blackOpal", "fireOpal", "sunstone", "ivory" ],
+      "materialsGem": [ "onyx", "tigerEye", "turquoise", "whiteQuartz", "amber", "moonstone", "agate", "azurite", "bloodstone", "carnelian", "citrine", "hematite", "lapisLazuli", "lavenderJade", "malachite", "RedJade", "roseQuartz", "smokeyQuartz", "amethyst", "greenJade", "tourmaline", "whiteJade", "yellowGarnet", "zircon", "blackGarnet", "jet", "redGarnet", "yellowTopaz", "peridot", "aquamarine", "greenGarnet", "opal", "imperialTopaz", "whiteSapphire", "blackOpal", "fireOpal", "sunstone", "ivory" ],
       "materialsLeather": [ "leather", "armoredilloHide", "reedSharkHide", "gromnieHide" ],
       "materialsMetal": [ "bronze", "steel", "copper", "gold", "silver", "brass", "iron" ],
-      "materialsStone": [ "alabaster", "granite", "marble", "obsidian", "serpentine" ],
+      "materialsStone": [ "sandstone", "alabaster", "granite", "marble", "obsidian", "serpentine" ],
       "materialsWood": [ "pine", "mahogany", "oak", "ebony", "teak" ]
     },
     {
@@ -357,10 +357,10 @@
 
       "materialsCeramic": [ "ceramic", "porcelain" ],
       "materialsCloth": [ "wool", "linen", "silk", "satin", "velvet" ],
-      "materialsGem": [  "amber", "moonstone", "agate", "azurite", "bloodstone", "carnelian", "citrine", "hematite", "lapisLazuli", "lavenderJade", "malachite", "RedJade", "roseQuartz", "smokeyQuartz", "zircon", "blackGarnet", "jet", "redGarnet", "yellowTopaz", "peridot", "aquamarine", "greenGarnet", "opal", "imperialTopaz", "whiteSapphire", "blackOpal", "fireOpal", "sunstone", "diamond", "ruby", "sapphire", "emerald", "ivory" ],
+      "materialsGem": [ "onyx", "tigerEye", "turquoise", "whiteQuartz", "amber", "moonstone", "agate", "azurite", "bloodstone", "carnelian", "citrine", "hematite", "lapisLazuli", "lavenderJade", "malachite", "RedJade", "roseQuartz", "smokeyQuartz", "amethyst", "greenJade", "tourmaline", "whiteJade", "yellowGarnet", "zircon", "blackGarnet", "jet", "redGarnet", "yellowTopaz", "peridot", "aquamarine", "greenGarnet", "opal", "imperialTopaz", "whiteSapphire", "blackOpal", "fireOpal", "sunstone", "diamond", "ruby", "sapphire", "emerald", "ivory" ],
       "materialsLeather": [ "leather", "armoredilloHide", "reedSharkHide", "gromnieHide" ],
       "materialsMetal": [ "bronze", "steel", "copper", "gold", "silver", "brass", "iron", "pyreal" ],
-      "materialsStone": [ "alabaster", "granite", "marble" ],
+      "materialsStone": [ "sandstone", "alabaster", "granite", "marble", "obsidian", "serpentine" ],
       "materialsWood": [ "pine", "mahogany", "oak", "ebony", "teak" ]
     },
     {
@@ -380,7 +380,7 @@
       "maxMeleeWeaponWieldTier": 400,
       "minMissileWeaponWieldTier": 250,
       "maxMissileWeaponWieldTier": 360,
-      "minCasterWieldTier": 310,
+      "minCasterWieldTier": 0,
       "maxCasterWieldTier": 355,
 
       "minArmorWieldTier": 5,
@@ -428,17 +428,17 @@
 
       "materialsCeramic": [ "ceramic", "porcelain" ],
       "materialsCloth": [ "wool", "linen", "silk", "satin", "velvet" ],
-      "materialsGem": [  "amber", "moonstone", "agate", "azurite", "bloodstone", "carnelian", "citrine", "hematite", "lapisLazuli", "lavenderJade", "malachite", "RedJade", "roseQuartz", "smokeyQuartz", "zircon", "blackGarnet", "jet", "redGarnet", "yellowTopaz", "peridot", "aquamarine", "greenGarnet", "opal", "imperialTopaz", "whiteSapphire", "blackOpal", "fireOpal", "sunstone", "diamond", "ruby", "sapphire", "emerald", "ivory" ],
+      "materialsGem": [ "onyx", "tigerEye", "turquoise", "whiteQuartz", "amber", "moonstone", "agate", "azurite", "bloodstone", "carnelian", "citrine", "hematite", "lapisLazuli", "lavenderJade", "malachite", "RedJade", "roseQuartz", "smokeyQuartz", "amethyst", "greenJade", "tourmaline", "whiteJade", "yellowGarnet", "zircon", "blackGarnet", "jet", "redGarnet", "yellowTopaz", "peridot", "aquamarine", "greenGarnet", "opal", "imperialTopaz", "whiteSapphire", "blackOpal", "fireOpal", "sunstone", "diamond", "ruby", "sapphire", "emerald", "ivory" ],
       "materialsLeather": [ "leather", "armoredilloHide", "reedSharkHide", "gromnieHide" ],
       "materialsMetal": [ "bronze", "steel", "copper", "gold", "silver", "brass", "iron", "pyreal" ],
-      "materialsStone": [ "alabaster", "granite", "marble" ],
+      "materialsStone": [ "sandstone", "alabaster", "granite", "marble", "obsidian", "serpentine" ],
       "materialsWood": [ "pine", "mahogany", "oak", "ebony", "teak" ]
     }
   ],
   "meleeWeapons": [
     {
       "category": "axes",
-      "possibleMaterials": [ "metal", "wood", "stone" ],
+      "possibleMaterials": [ "metal", "wood" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -733,7 +733,7 @@
     },
     {
       "category": "daggers",
-      "possibleMaterials": [ "metal", "gem" ],
+      "possibleMaterials": [ "metal" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -1018,7 +1018,7 @@
     },
     {
       "category": "maces",
-      "possibleMaterials": [ "metal", "wood", "stone" ],
+      "possibleMaterials": [ "metal", "wood" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -1320,7 +1320,7 @@
       "category": "spears",
       "slayer_MinDamageBonus": 1.25,
       "slayer_MaxDamageBonus": 2.0,
-      "possibleMaterials": [ "metal", "wood", "stone" ],
+      "possibleMaterials": [ "metal", "wood" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -1603,7 +1603,7 @@
     },
     {
       "category": "swords",
-      "possibleMaterials": [ "metal", "gem" ],
+      "possibleMaterials": [ "metal" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -1925,7 +1925,7 @@
       "category": "staves",
       "slayer_MinDamageBonus": 1.25,
       "slayer_MaxDamageBonus": 2.0,
-      "possibleMaterials": [ "wood", "stone" ],
+      "possibleMaterials": [ "metal", "wood" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -2213,7 +2213,7 @@
     },
     {
       "category": "unarmed",
-      "possibleMaterials": [ "metal", "gem", "stone" ],
+      "possibleMaterials": [ "metal" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -2490,7 +2490,7 @@
   "missileWeapons": [
     {
       "category": "bows",
-      "possibleMaterials": [ "wood", "stone" ],
+      "possibleMaterials": [ "wood" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -2762,7 +2762,7 @@
       "category": "crossbows",
       "slayer_MinDamageBonus": 1.25,
       "slayer_MaxDamageBonus": 2.0,
-      "possibleMaterials": [ "metal", "wood", "stone" ],
+      "possibleMaterials": [ "metal", "wood" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -3016,7 +3016,7 @@
     },
     {
       "category": "thrown",
-      "possibleMaterials": [ "metal", "ceramic", "stone", "gem" ],
+      "possibleMaterials": [ "wood", "metal", "ceramic" ],
       "wieldTiers": [
         {
           "weaponSkillRequired": 0,
@@ -3264,7 +3264,6 @@
         },
         {
           "name": "Chalice",
-		  "possibleMaterials": [ "metal", "stone", "gem" ],
           "wcid": 142
         },
         {
@@ -3277,12 +3276,10 @@
         },
         {
           "name": "Flagon",
-		  "possibleMaterials": [ "metal", "stone", "gem" ],
           "wcid": 150
         },
         {
           "name": "Goblet",
-		  "possibleMaterials": [ "metal", "stone", "gem" ],
           "wcid": 154
         },
         {
@@ -3307,19 +3304,19 @@
         },
         {
           "name": "Atlatl",
-          "possibleMaterials": [ "wood", "stone" ],
+          "possibleMaterials": [ "wood", "metal" ],
           "wcid": 12463
         },
         {
           "name": "Royal Atlatl",
-          "possibleMaterials": [ "wood", "stone" ],
+          "possibleMaterials": [ "wood", "metal" ],
           "wcid": 20640
         }
       ]
     }
   ],
   "casters": {
-    "possibleMaterials": [ "gem", "metal", "stone" ],
+    "possibleMaterials": [ "gem", "metal" ],
     "wieldTiers": [
       {
         "weaponSkillRequired": 0,
@@ -3353,8 +3350,8 @@
       },
       {
         "weaponSkillRequired": 290,
-        "minElementalDamageMod": 0.0,
-        "maxElementalDamageMod": 0.0,
+        "minElementalDamageMod": 0.1,
+        "maxElementalDamageMod": 2.0,
         "maxManaConversionBonus": 10.0,
         "maxMeleeDefenseBonus": 15.0,
         "maxMissileDefenseBonus": 2.5,
@@ -3385,8 +3382,8 @@
       },
       {
         "weaponSkillRequired": 310,
-        "minElementalDamageMod": 0.0,
-        "maxElementalDamageMod": 0.0,
+        "minElementalDamageMod": 2.0,
+        "maxElementalDamageMod": 5.0,
         "maxManaConversionBonus": 10.0,
         "maxMeleeDefenseBonus": 15.0,
         "maxMissileDefenseBonus": 2.5,
@@ -3417,8 +3414,8 @@
       },
       {
         "weaponSkillRequired": 330,
-        "minElementalDamageMod": 0.0,
-        "maxElementalDamageMod": 0.0,
+        "minElementalDamageMod": 5.0,
+        "maxElementalDamageMod": 8.0,
         "maxManaConversionBonus": 10.0,
         "maxMeleeDefenseBonus": 15.0,
         "maxMissileDefenseBonus": 2.5,
@@ -3449,8 +3446,8 @@
       },
       {
         "weaponSkillRequired": 355,
-        "minElementalDamageMod": 0.0,
-        "maxElementalDamageMod": 0.0,
+        "minElementalDamageMod": 8.0,
+        "maxElementalDamageMod": 10.0,
         "maxManaConversionBonus": 10.0,
         "maxMeleeDefenseBonus": 15.0,
         "maxMissileDefenseBonus": 2.5,
@@ -3491,7 +3488,7 @@
       },
       {
         "name": "Staff",
-        "possibleMaterials": [ "wood", "metal", "stone" ],
+        "possibleMaterials": [ "wood", "metal" ],
         "wcid": 2547
       },
       {
@@ -3570,7 +3567,7 @@
         "entries": [
           {
             "name": "Kite Shield",
-            "possibleMaterials": [ "wood", "metal", "stone" ],
+            "possibleMaterials": [ "wood", "metal" ],
             "wcid": 91
           },
           {
@@ -3641,8 +3638,8 @@
         "possibleMaterials": [ "leather" ],
         "entries": [
           {
-		    "name": "Buckler",
-            "possibleMaterials": [ "wood", "metal", "stone" ],
+            "possibleMaterials": [ "wood", "metal" ],
+            "name": "Buckler",
             "wcid": 44
           },
           {
@@ -3778,7 +3775,7 @@
         "entries": [
           {
             "name": "Tower Shield",
-            "possibleMaterials": [ "wood", "metal", "stone" ],
+            "possibleMaterials": [ "wood", "metal" ],
             "wcid": 95
           },
           {
@@ -3845,11 +3842,11 @@
       },
       {
         "category": "scalemail",
-        "possibleMaterials": [ "metal", "stone" ],
+        "possibleMaterials": [ "metal" ],
         "entries": [
           {
             "name": "Large Round Shield",
-            "possibleMaterials": [ "wood", "metal", "stone" ],
+            "possibleMaterials": [ "wood", "metal" ],
             "wcid": 94
           },
           {
@@ -3924,7 +3921,7 @@
         "entries": [
           {
             "name": "Round Shield",
-            "possibleMaterials": [ "wood", "metal", "stone" ],
+            "possibleMaterials": [ "wood", "metal" ],
             "wcid": 93
           },
           {
@@ -3995,7 +3992,7 @@
         "entries": [
           {
             "name": "Large Kite Shield",
-            "possibleMaterials": [ "wood", "metal", "stone" ],
+            "possibleMaterials": [ "wood", "metal" ],
             "wcid": 92
           },
           {
@@ -4054,14 +4051,14 @@
           },
           {
             "name": "Koujia Sleeves",
-            "possibleMaterials": [ "stone", "metal" ],
+            "possibleMaterials": [ "leather" ],
             "wcid": 6005
           }
         ]
       },
       {
         "category": "celdon",
-        "possibleMaterials": [ "metal", "stone" ],
+        "possibleMaterials": [ "metal" ],
         "entries": [
           {
             "name": "Celdon Girth",
@@ -4083,16 +4080,16 @@
       },
       {
         "category": "amuli",
-        "possibleMaterials": [ "metal", "stone" ],
+        "possibleMaterials": [ "metal" ],
         "entries": [
           {
             "name": "Amuli Coat",
-            "possibleMaterials": [ "metal", "stone" ],
+            "possibleMaterials": [ "metal" ],
             "wcid": 6046
           },
           {
             "name": "Amuli Leggings",
-            "possibleMaterials": [ "metal", "stone" ],
+            "possibleMaterials": [ "leather" ],
             "wcid": 6047
           }
         ]
@@ -4178,7 +4175,7 @@
             "maxShieldArmorBonus": 0
           }
         ],
-        "possibleMaterials": [ "metal", "stone" ],
+        "possibleMaterials": [ "metal" ],
         "entries": [
           {
             "name": "Covenant Shield",
@@ -4275,7 +4272,7 @@
           },
           {
             "name": "Lorica Sleeves",
-            "possibleMaterials": [ "metal" ],
+            "possibleMaterials": [ "leather" ],
             "wcid": 27225
           }
         ]
@@ -4459,7 +4456,7 @@
         },
         {
           "name": "Crown",
-          "possibleMaterials": [ "metal", "stone" ],
+          "possibleMaterials": [ "metal" ],
           "wcid": 296
         }
       ]
@@ -4496,7 +4493,7 @@
   "jewelry": [
     {
       "category": "Necklaces",
-      "possibleMaterials": [ "metal", "gem" ],
+      "possibleMaterials": [ "metal" ],
       "entries": [
         {
           "name": "Necklace",
@@ -4514,7 +4511,7 @@
     },
     {
       "category": "Rings",
-      "possibleMaterials": [ "metal", "gem", "stone" ],
+      "possibleMaterials": [ "metal" ],
       "entries": [
         {
           "name": "Ring",
@@ -4528,7 +4525,7 @@
     },
     {
       "category": "Bracelets",
-      "possibleMaterials": [ "metal", "gem" ],
+      "possibleMaterials": [ "metal" ],
       "entries": [
         {
           "name": "Bracelet",
@@ -13504,183 +13501,183 @@
       "palettes": []
     },
     "agate": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 61 ],
       "gemValue": 100,
       "gemName": "Agate"
     },
     "azurite": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 10, 2 ],
       "gemValue": 100,
       "gemName": "Azurite"
     },
     "lapisLazuli": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 2 ],
       "gemValue": 100,
       "gemName": "Lapis Lazuli"
     },
     "malachite": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 8 ],
       "gemValue": 100,
       "gemName": "Malachite"
     },
     "smokeyQuartz": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 61 ],
       "gemValue": 100,
       "gemName": "Smokey Quartz",
       "gemPluralName": "Smokey Quartzes"
     },
     "tigerEye": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 83, 21 ],
       "gemValue": 100,
       "gemName": "Tiger Eye"
     },
     "turquoise": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 77 ],
       "gemValue": 100,
       "gemName": "Turquoise"
     },
     "whiteQuartz": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 61 ],
       "gemValue": 100,
       "gemName": "White Quartz",
       "gemPluralName": "White Quartzes"
     },
     "ivory": {
-      "valueMultiplier": 1.3,
+      "valueMultiplier": 1.2,
       "palettes": [ 61 ],
       "gemPluralName": "Pieces of Ivory"
     },
     "amber": {
-      "valueMultiplier": 1.5,
+      "valueMultiplier": 1.4,
       "palettes": [ 83, 21 ],
       "gemValue": 500,
       "gemName": "Amber"
     },
     "bloodstone": {
-      "valueMultiplier": 1.5,
+      "valueMultiplier": 1.4,
       "palettes": [ 8 ],
       "gemValue": 500,
       "gemName": "Bloodstone"
     },
     "carnelian": {
-      "valueMultiplier": 1.5,
+      "valueMultiplier": 1.4,
       "palettes": [ 83, 4 ],
       "gemValue": 500,
       "gemName": "Carnelian"
     },
     "citrine": {
-      "valueMultiplier": 1.5,
+      "valueMultiplier": 1.4,
       "palettes": [ 14 ],
       "gemValue": 500,
       "gemName": "Citrine"
     },
     "hematite": {
-      "valueMultiplier": 1.5,
+      "valueMultiplier": 1.4,
       "palettes": [ 39 ],
       "gemValue": 500,
       "gemName": "Hematite"
     },
     "moonstone": {
-      "valueMultiplier": 1.5,
+      "valueMultiplier": 1.4,
       "palettes": [ 61 ],
       "gemValue": 500,
       "gemName": "Moonstone"
     },
     "onyx": {
-      "valueMultiplier": 1.5,
+      "valueMultiplier": 1.4,
       "palettes": [ 39 ],
       "gemValue": 500,
       "gemName": "Onyx"
     },
     "roseQuartz": {
-      "valueMultiplier": 1.5,
+      "valueMultiplier": 1.4,
       "palettes": [ 82 ],
       "gemValue": 500,
       "gemName": "Rose Quartz",
       "gemPluralName": "Rose Quartzes"
     },
     "blackGarnet": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 39 ],
       "gemValue": 1000,
       "gemName": "Black Garnet"
     },
     "amethyst": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 82 ],
       "gemValue": 1000,
       "gemName": "Amethyst"
     },
     "greenJade": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 8 ],
       "gemValue": 1000,
       "gemName": "Green Jade"
     },
     "jet": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 39 ],
       "gemValue": 1000,
       "gemName": "Jet"
     },
     "redGarnet": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 14 ],
       "gemValue": 1000,
       "gemName": "Red Garnet"
     },
     "tourmaline": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 8 ],
       "gemValue": 1000,
       "tourmaline": "Tourmaline"
     },
     "whiteJade": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 61 ],
       "gemValue": 1000,
       "gemName": "White Jade"
     },
     "yellowGarnet": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 83, 21 ],
       "gemValue": 1000,
       "gemName": "Yellow Garnet"
     },
     "zircon": {
-      "valueMultiplier": 1.7,
+      "valueMultiplier": 1.6,
       "palettes": [ 83, 21 ],
       "gemValue": 1000,
       "gemName": "Zircon"
     },
     "aquamarine": {
-      "valueMultiplier": 1.9,
+      "valueMultiplier": 1.8,
       "palettes": [ 77 ],
       "gemValue": 2500,
       "gemName": "Aquamarine"
     },
     "greenGarnet": {
-      "valueMultiplier": 1.9,
+      "valueMultiplier": 1.8,
       "palettes": [ 8 ],
       "gemValue": 2500,
       "gemName": "Green Garnet"
     },
     "opal": {
-      "valueMultiplier": 1.9,
+      "valueMultiplier": 1.8,
       "palettes": [ 77 ],
       "gemValue": 2500,
       "gemName": "Opal"
     },
     "peridot": {
-      "valueMultiplier": 1.9,
+      "valueMultiplier": 1.8,
       "palettes": [ 8 ],
       "gemValue": 2500,
       "gemName": "Peridot"
@@ -13736,25 +13733,25 @@
       "gemName": "Black Opal"
     },
     "diamond": {
-      "valueMultiplier": 3.0,
+      "valueMultiplier": 2.5,
       "palettes": [ 61 ],
       "gemValue": 10000,
       "gemName": "Diamond"
     },
     "emerald": {
-      "valueMultiplier": 3.0,
+      "valueMultiplier": 2.5,
       "palettes": [ 8 ],
       "gemValue": 10000,
       "gemName": "Emerald"
     },
     "ruby": {
-      "valueMultiplier": 3.0,
+      "valueMultiplier": 2.5,
       "palettes": [ 14 ],
       "gemValue": 10000,
       "gemName": "Ruby"
     },
     "sapphire": {
-      "valueMultiplier": 3.0,
+      "valueMultiplier": 2.5,
       "palettes": [ 2 ],
       "gemValue": 10000,
       "gemName": "Sapphire"
@@ -13812,7 +13809,7 @@
       "palettes": [ 21 ]
     },
     "pyreal": {
-      "valueMultiplier": 2.7,
+      "valueMultiplier": 2.0,
       "palettes": [ 8 ]
     },
 
