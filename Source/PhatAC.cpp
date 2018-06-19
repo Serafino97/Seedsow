@@ -302,6 +302,8 @@ std::string GetWindowStringText(HWND hWnd)
 
 INT_PTR CALLBACK MainProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
+
+
 	switch (message)
 	{
 	case WM_INITDIALOG:
@@ -324,6 +326,33 @@ INT_PTR CALLBACK MainProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #ifdef PUBLIC_BUILD
 			ShowWindow(GetDlgItem(hDlg, IDC_DEBUGCHECK), SW_HIDE);
 #endif
+			// Start Server on initialization 
+			if (!g_pPhatServer)
+			{
+				std::string serverConfig = GetWindowStringText(GetDlgItem(hDlg, IDC_SERVERCONFIG));
+
+				if (serverConfig.empty())
+				{
+					serverConfig = DEFAULT_CONFIG_FILE;
+				}
+
+				std::string configFilePath = g_pGlobals->GetGameFile(serverConfig.c_str());
+
+				if (FileExists(configFilePath.c_str()))
+				{
+					g_pPhatServer = new CPhatServer(configFilePath.c_str());
+					SetWindowText(GetDlgItem(hDlg, IDC_TOGGLE), "Stop");
+					SetWindowText(GetDlgItem(hDlg, IDC_CONNECTLINK),
+						csprintf("acclient.exe -h %s -p %s -a username:password -rodat off",
+						(!strcmp(g_pPhatServer->Config().GetValue("bind_ip"), "0.0.0.0") ? "127.0.0.1" : g_pPhatServer->Config().GetValue("bind_ip")),
+							g_pPhatServer->Config().GetValue("bind_port")));
+				}
+				else
+				{
+					MsgBox("Please specify a valid config filename.");
+				}
+			}
+
 			return TRUE;
 		}
 	case WM_COMMAND:
@@ -398,7 +427,7 @@ INT_PTR CALLBACK MainProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					if (!g_pPhatServer)
 					{
-						MsgBox("You might want to start the server first. ;)");
+						MsgBox("You might want to start the server first! ;)");
 						break;
 					}
 
@@ -557,7 +586,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	extern DWORD64 g_RandomAdminPassword;
 	g_RandomAdminPassword = ((DWORD64)FastRNG.NextUInt(0, 0xFFFFFFF0) << 32) | FastRNG.NextUInt(0, 0xFFFFFFF0) + GetTickCount64();
 
-	WINLOG(Temp, Normal, "Welcome to GDL - Classic Dereth - SeedSow!\n");
+	WINLOG(Temp, Normal, "Welcome to GDL - Classic Dereth - SeedSow!!!\n");
 	SERVER_INFO << "Welcome to GDL - Classic Dereth - SeedSow!";
 
 	ShowWindow(g_hWndMain, nCmdShow);
