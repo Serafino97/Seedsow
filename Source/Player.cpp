@@ -1,3 +1,4 @@
+
 #include "StdAfx.h"
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
@@ -22,7 +23,6 @@
 #include "House.h"
 #include "easylogging++.h"
 #include "Util.h"
-#include "fastrand.h"
 
 #define PLAYER_SAVE_INTERVAL 180.0
 #define PLAYER_HEALTH_POLL_INTERVAL 5.0
@@ -79,7 +79,7 @@ CPlayerWeenie::CPlayerWeenie(CClient *pClient, DWORD dwGUID, WORD instance_ts)
 CPlayerWeenie::~CPlayerWeenie()
 {
 	LeaveFellowship();
-	
+
 	if (m_pTradeManager)
 	{
 		m_pTradeManager->CloseTrade(this);
@@ -158,7 +158,7 @@ void CPlayerWeenie::BeginLogout()
 		m_pTradeManager->CloseTrade(this);
 		m_pTradeManager = NULL;
 	}
-	
+
 	StopCompletely(0);
 }
 
@@ -593,7 +593,7 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, DWORD kil
 	}
 	else
 	{
-		amountOfItemsToDrop = floor(level / 20) + FastRNG.Next(0, 2);
+		amountOfItemsToDrop = floor(level / 20) + Random::GenInt(0, 2);
 	}
 
 	// either we can't find a killer (killed self?) or the killer is not a player
@@ -664,43 +664,6 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, DWORD kil
 				value /= 2;
 			}
 		}
-		// 50% value of second+ instance of itemValueList
-		// used 2 multimaps so i could count. hackjob.
-		std::multimap<int, CWeenieObject *> tmpVLint;
-		std::multimap<std::string, int> tmpVLstr;
-		std::string objName;
-		for (auto iter = itemValueList.begin(); iter != itemValueList.end(); ++iter)
-		{
-			tmpVLint.insert(std::pair<int, CWeenieObject *>(iter->first, iter->second));
-			tmpVLstr.insert(std::pair<std::string, int>(iter->second->InqStringQuality(NAME_STRING, objName), iter->first));
-		}
-
-		std::multimap<int, CWeenieObject *> finaliVL;
-		int amtOfEleN = 0;
-		int amtOfEleV = 0;
-		int inFinal = 0;
-		int curval = 0;
-		int nVal = 0;
-		for (auto iterI = tmpVLint.begin(); iterI != tmpVLint.end(); ++iterI)
-		{
-			for (auto iterS = tmpVLstr.begin(); iterS != tmpVLstr.end(); ++iterS)
-			{
-				amtOfEleN = tmpVLstr.count(iterS->first);
-				amtOfEleV = tmpVLint.count(iterI->first);
-				inFinal = finaliVL.count(iterI->first);
-				curval = iterI->first;
-				nVal = iterI->first / 2;
-				break;
-			}
-			if (amtOfEleV > 1 && amtOfEleN > 1 && inFinal > 0)
-				finaliVL.insert(std::pair<int, CWeenieObject *>(nVal, iterI->second));
-
-			else
-				finaliVL.insert(std::pair<int, CWeenieObject *>(curval, iterI->second));
-		}
-		//@dropitemsondeath on
-
-
 		else // not a stack
 		{
 			int value = item->GetValue();
@@ -742,7 +705,8 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, DWORD kil
 	}
 
 	// START item dropping BY VALUE
-	for (auto iter = finaliVL.rbegin(); iter != finaliVL.rend(); ++iter) {
+	for (auto iter = itemValueList.rbegin(); iter != itemValueList.rend(); ++iter)
+	{
 		if (itemsLost >= amountOfItemsToDrop)
 		{
 			break;
@@ -766,10 +730,8 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, DWORD kil
 			itemsLostText.append(", your ");
 		else
 			itemsLostText.append("your ");
-		int stackSize = itemToDrop->InqIntQuality(STACK_SIZE_INT, 1);
-		itemsLostText.append(itemToDrop->GetName());
-		break;
 
+		itemsLostText.append(iter->second->GetName());
 	}
 
 	itemsLostText.append("!");
@@ -1021,55 +983,55 @@ DWORD CPlayerWeenie::OnReceiveInventoryItem(CWeenieObject *source, CWeenieObject
 /*
 void CPlayerWeenie::HandleKilledEvent(CWeenieObject *victim, DAMAGE_TYPE damageType)
 {
-	switch (damageType)
-	{
-	case BLUDGEON_DAMAGE_TYPE:
-		{
-			switch (Random::GenInt(0, 7))
-			{
-			case 0:
-				{
-					NotifyKillerEvent(csprintf("You flatten %s's body with the force of your assault!", pTarget->GetName().c_str()));
-					break;
-				}
-			case 1:
-				{
-					NotifyKillerEvent(csprintf("You beat %s to a lifeless pulp!", pTarget->GetName().c_str()));
-					break;
-				}
-			case 2:
-				{
-					NotifyKillerEvent(csprintf("You smite %s mightily!", pTarget->GetName().c_str()));
-					break;
-				}
-			case 3:
-				{
-					NotifyKillerEvent(csprintf("You knock %s into next Morningthaw!", pTarget->GetName().c_str()));
-					break;
-				}
-			case 4:
-				{
-					NotifyKillerEvent(csprintf("%s is utterly destroyed by your attack!", pTarget->GetName().c_str()));
-					break;
-				}
-			case 5:
-				{
-					NotifyKillerEvent(csprintf("%s catches your attack, with dire consequences!", pTarget->GetName().c_str()));
-					break;
-				}
-			case 6:
-				{
-					NotifyKillerEvent(csprintf("The deadly force of your attack is so strong that %s's ancestors feel it!", pTarget->GetName().c_str()));
-					break;
-				}
-			case 7:
-				{
-					NotifyKillerEvent(csprintf("The thunder of crushing %s is followed by the deafening silence of death!", pTarget->GetName().c_str()));
-					break;
-				}
-			}
-		}
-	}
+switch (damageType)
+{
+case BLUDGEON_DAMAGE_TYPE:
+{
+switch (Random::GenInt(0, 7))
+{
+case 0:
+{
+NotifyKillerEvent(csprintf("You flatten %s's body with the force of your assault!", pTarget->GetName().c_str()));
+break;
+}
+case 1:
+{
+NotifyKillerEvent(csprintf("You beat %s to a lifeless pulp!", pTarget->GetName().c_str()));
+break;
+}
+case 2:
+{
+NotifyKillerEvent(csprintf("You smite %s mightily!", pTarget->GetName().c_str()));
+break;
+}
+case 3:
+{
+NotifyKillerEvent(csprintf("You knock %s into next Morningthaw!", pTarget->GetName().c_str()));
+break;
+}
+case 4:
+{
+NotifyKillerEvent(csprintf("%s is utterly destroyed by your attack!", pTarget->GetName().c_str()));
+break;
+}
+case 5:
+{
+NotifyKillerEvent(csprintf("%s catches your attack, with dire consequences!", pTarget->GetName().c_str()));
+break;
+}
+case 6:
+{
+NotifyKillerEvent(csprintf("The deadly force of your attack is so strong that %s's ancestors feel it!", pTarget->GetName().c_str()));
+break;
+}
+case 7:
+{
+NotifyKillerEvent(csprintf("The thunder of crushing %s is followed by the deafening silence of death!", pTarget->GetName().c_str()));
+break;
+}
+}
+}
+}
 }
 */
 
@@ -1081,56 +1043,56 @@ void CPlayerWeenie::NotifyVictimEvent(CWeenieObject *killer, DAMAGE_TYPE damageT
 
 void CPlayerWeenie::OnDealtDamage(CWeenieObject *attacker, DAMAGE_TYPE damageType, unsigned int damage)
 {
-	if (!pTarget->IsDead())
-	{
-		NotifyAttackerEvent(pTarget->GetName().c_str(), 4, damageDone / (double)(pTarget->GetMaxHealth()), damageDone, 0, 0);
-	}
-	else
-	{
-		switch (Random::GenInt(0, 7))
-		{
-		case 0:
-			{
-				NotifyKillerEvent(csprintf("You flatten %s's body with the force of your assault!", pTarget->GetName().c_str()));
-				break;
-			}
-		case 1:
-			{
-				NotifyKillerEvent(csprintf("You beat %s to a lifeless pulp!", pTarget->GetName().c_str()));
-				break;
-			}
-		case 2:
-			{
-				NotifyKillerEvent(csprintf("You smite %s mightily!", pTarget->GetName().c_str()));
-				break;
-			}
-		case 3:
-			{
-				NotifyKillerEvent(csprintf("You knock %s into next Morningthaw!", pTarget->GetName().c_str()));
-				break;
-			}
-		case 4:
-			{
-				NotifyKillerEvent(csprintf("%s is utterly destroyed by your attack!", pTarget->GetName().c_str()));
-				break;
-			}
-		case 5:
-			{
-				NotifyKillerEvent(csprintf("%s catches your attack, with dire consequences!", pTarget->GetName().c_str()));
-				break;
-			}
-		case 6:
-			{
-				NotifyKillerEvent(csprintf("The deadly force of your attack is so strong that %s's ancestors feel it!", pTarget->GetName().c_str()));
-				break;
-			}
-		case 7:
-			{
-				NotifyKillerEvent(csprintf("The thunder of crushing %s is followed by the deafening silence of death!", pTarget->GetName().c_str()));
-				break;
-			}
-		}
-	}
+if (!pTarget->IsDead())
+{
+NotifyAttackerEvent(pTarget->GetName().c_str(), 4, damageDone / (double)(pTarget->GetMaxHealth()), damageDone, 0, 0);
+}
+else
+{
+switch (Random::GenInt(0, 7))
+{
+case 0:
+{
+NotifyKillerEvent(csprintf("You flatten %s's body with the force of your assault!", pTarget->GetName().c_str()));
+break;
+}
+case 1:
+{
+NotifyKillerEvent(csprintf("You beat %s to a lifeless pulp!", pTarget->GetName().c_str()));
+break;
+}
+case 2:
+{
+NotifyKillerEvent(csprintf("You smite %s mightily!", pTarget->GetName().c_str()));
+break;
+}
+case 3:
+{
+NotifyKillerEvent(csprintf("You knock %s into next Morningthaw!", pTarget->GetName().c_str()));
+break;
+}
+case 4:
+{
+NotifyKillerEvent(csprintf("%s is utterly destroyed by your attack!", pTarget->GetName().c_str()));
+break;
+}
+case 5:
+{
+NotifyKillerEvent(csprintf("%s catches your attack, with dire consequences!", pTarget->GetName().c_str()));
+break;
+}
+case 6:
+{
+NotifyKillerEvent(csprintf("The deadly force of your attack is so strong that %s's ancestors feel it!", pTarget->GetName().c_str()));
+break;
+}
+case 7:
+{
+NotifyKillerEvent(csprintf("The thunder of crushing %s is followed by the deafening silence of death!", pTarget->GetName().c_str()));
+break;
+}
+}
+}
 }
 */
 
@@ -1144,7 +1106,7 @@ struct CompareManaNeeds : public std::binary_function<CWeenieObject*, CWeenieObj
 	{
 		// comparator for making a min-heap based on remaining mana
 		return ((left->InqIntQuality(ITEM_MAX_MANA_INT, 0, TRUE) - left->InqIntQuality(ITEM_CUR_MANA_INT, -1, TRUE))
-			> (right->InqIntQuality(ITEM_MAX_MANA_INT, 0, TRUE) - right->InqIntQuality(ITEM_CUR_MANA_INT, -1, TRUE)));
+	> (right->InqIntQuality(ITEM_MAX_MANA_INT, 0, TRUE) - right->InqIntQuality(ITEM_CUR_MANA_INT, -1, TRUE)));
 	}
 };
 
@@ -1257,7 +1219,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 							manaToApplyToEach = deficit;
 						}
 					}
-					catch(...)
+					catch (...)
 					{
 						SERVER_ERROR << "Error in UseEx for mana stones";
 					}
@@ -1285,7 +1247,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 						if (manaToApplyToEach > 0) { // handle case when you use a stone that doesn't even have enough mana to give 1 to each deficit item
 							objectsReceivingMana.insert(item);
 						}
-						
+
 						item->m_Qualities.SetInt(ITEM_CUR_MANA_INT, min(newManaAmount, itemMaxMana));
 						item->NotifyIntStatUpdated(ITEM_CUR_MANA_INT, false); // todo: is second positional arg correct?
 					}
@@ -1332,7 +1294,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 				else
 				{
 					int manaNeeded = targetMaxMana - targetCurrentMana;
-					
+
 
 					if (manaStoneCurrentMana >= manaNeeded)
 					{
@@ -1359,7 +1321,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 				}
 			}
 
-			if (manaStoneDestroyChance >= 1.0 || FastRNG.NextDouble() <= manaStoneDestroyChance) {
+			if (manaStoneDestroyChance >= 1.0 || Random::RollDice(0.0, 1.0) <= manaStoneDestroyChance) {
 				SendText(csprintf("The %s is destroyed.", pTool->GetName().c_str()), LTT_DEFAULT);
 				pTool->Remove();
 				RecalculateEncumbrance();
@@ -1431,11 +1393,11 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 				return WERROR_STAMINA_TOO_LOW;
 			}
 		}
-		else if (GetStamina() < 5) //I can't find a source but I'm pretty sure use actions always consumed some amount of stamina.
-		{
-			//SendText("You don't have enough stamina to do that.", LTT_CRAFT);
-			return WERROR_STAMINA_TOO_LOW;
-		}
+		//else if (GetStamina() < 5) //I can't find a source but I'm pretty sure use actions always consumed some amount of stamina.
+		//{
+		//	//SendText("You don't have enough stamina to do that.", LTT_CRAFT);
+		//	return WERROR_STAMINA_TOO_LOW;
+		//}
 
 		if (GetMana() < requiredMana)
 		{
@@ -1499,11 +1461,11 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 
 			if (amountOfTimesTinkered > 9)  // Don't allow 10 tinked items to have any more tinkers/imbues (Ivory & Leather don't use this case)
 			{
-				return WERROR_NONE;   
+				return WERROR_NONE;
 			}
 
 			int salvageMod;
-			
+
 			if (op->_SkillCheckFormulaType == 1)
 			{
 				salvageMod = GetMaterialMod(pTool->InqIntQuality(MATERIAL_TYPE_INT, 0));
@@ -1514,7 +1476,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 			}
 
 			int multiple = 1;
-			double aDifficulty[10] = {1, 1.1, 1.3, 1.6, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5}; // Attempt difficulty numbers from Endy's Tinker Calc 2.3.2
+			double aDifficulty[10] = { 1, 1.1, 1.3, 1.6, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5 }; // Attempt difficulty numbers from Endy's Tinker Calc 2.3.2
 			double difficulty = aDifficulty[amountOfTimesTinkered];
 
 			if (toolWorkmanship >= itemWorkmanship)
@@ -1536,11 +1498,11 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 		}
 
 		// 0x80000000 : Use Crafting Chance of Success Dialog
-		if (_playerModule.options_ & 0x80000000 && !bConfirmed )
+		if (_playerModule.options_ & 0x80000000 && !bConfirmed)
 		{
 			std::ostringstream sstrMessage;
 			sstrMessage.precision(3);
-			sstrMessage << "You have a " << successChance*100 << "% chance of using " << pTool->GetName() << " on " << pTarget->GetName() << ".";
+			sstrMessage << "You have a " << successChance * 100 << "% chance of using " << pTool->GetName() << " on " << pTarget->GetName() << ".";
 
 
 			BinaryWriter confirmCrafting;
@@ -1554,7 +1516,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 			return WERROR_NONE;
 		}
 
-		double successRoll = FastRNG.NextDouble();
+		double successRoll = Random::RollDice(0.0, 1.0);
 
 		if (successRoll <= successChance)
 		{
@@ -1574,7 +1536,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 			}
 
 			SendText(op->_successMessage.c_str(), LTT_CRAFT);
-			
+
 			// Broadcast messages for tinkering
 			switch (op->_SkillCheckFormulaType)
 			{
@@ -1595,7 +1557,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 				}
 
 				IMBUE_LOG << "P:" << InqStringQuality(NAME_STRING, "") << " SL:" << skillLevel << " T:" << pTarget->InqStringQuality(NAME_STRING, "") << " TW:" << itemWorkmanship << " TT:" << amountOfTimesTinkered <<
-					" M:" << pTool->InqStringQuality(NAME_STRING, "") << " MW:" << toolWorkmanship << " %:" << successChance << " Roll:" << successRoll << " S/F:" << (successChance ? "TRUE" : "FALSE");
+					" M:" << pTool->InqStringQuality(NAME_STRING, "") << " MW:" << toolWorkmanship << " %:" << successChance << " Roll:" << successRoll;
 
 				break;
 			}
@@ -1609,13 +1571,13 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 			if (requiredStamina == 0)
 				AdjustStamina(-5); //if we don't have any stamina usage specified let's use 5.
 
-			if (op->_successConsumeTargetChance == 1.0 || FastRNG.NextDouble() <= op->_successConsumeTargetChance)
+			if (op->_successConsumeTargetChance == 1.0 || Random::RollDice(0.0, 1.0) <= op->_successConsumeTargetChance)
 			{
 				pTarget->DecrementStackNum(op->_successConsumeTargetAmount);
 				if (!op->_successConsumeTargetMessage.empty())
 					SendText(op->_successConsumeTargetMessage.c_str(), LTT_CRAFT);
 			}
-			if (op->_successConsumeToolChance == 1.0 || FastRNG.NextDouble() <= op->_successConsumeToolChance)
+			if (op->_successConsumeToolChance == 1.0 || Random::RollDice(0.0, 1.0) <= op->_successConsumeToolChance)
 			{
 				pTool->DecrementStackNum(op->_successConsumeToolAmount);
 				if (!op->_successConsumeToolMessage.empty())
@@ -1661,7 +1623,7 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 				}
 
 				IMBUE_LOG << "P:" << InqStringQuality(NAME_STRING, "") << " SL:" << skillLevel << " T:" << pTarget->InqStringQuality(NAME_STRING, "") << " TW:" << itemWorkmanship << " TT:" << amountOfTimesTinkered <<
-					" M:" << pTool->InqStringQuality(NAME_STRING, "") << " MW:" << toolWorkmanship << " %:" << successChance << " Roll:" << successRoll << " S/F:" << (successChance ? "TRUE" : "FALSE");
+					" M:" << pTool->InqStringQuality(NAME_STRING, "") << " MW:" << toolWorkmanship << " %:" << successChance << " Roll:" << successRoll;
 
 				break;
 			}
@@ -1675,13 +1637,13 @@ int CPlayerWeenie::UseEx(bool bConfirmed)
 			if (requiredStamina == 0)
 				AdjustStamina(-5); //if we don't have any stamina usage specified let's use 5.
 
-			if (op->_failureConsumeTargetChance == 1.0 || FastRNG.NextDouble() <= op->_failureConsumeTargetChance)
+			if (op->_failureConsumeTargetChance == 1.0 || Random::RollDice(0.0, 1.0) <= op->_failureConsumeTargetChance)
 			{
 				pTarget->DecrementStackNum(op->_failureConsumeTargetAmount);
 				if (!op->_failureConsumeTargetMessage.empty())
 					SendText(op->_failureConsumeTargetMessage.c_str(), LTT_CRAFT);
 			}
-			if (op->_failureConsumeToolChance == 1.0 || FastRNG.NextDouble() <= op->_failureConsumeToolChance)
+			if (op->_failureConsumeToolChance == 1.0 || Random::RollDice(0.0, 1.0) <= op->_failureConsumeToolChance)
 			{
 				pTool->DecrementStackNum(op->_failureConsumeToolAmount);
 				if (!op->_failureConsumeToolMessage.empty())
@@ -1714,7 +1676,7 @@ int CPlayerWeenie::GetMaterialMod(int materialInt)
 	}
 	case Ebony_MaterialType:
 	case Teak_MaterialType:
-	case Steel_MaterialType :
+	case Steel_MaterialType:
 	case Satin_MaterialType:
 	case Porcelain_MaterialType:
 	case Mahogany_MaterialType:
@@ -2114,8 +2076,6 @@ bool CPlayerWeenie::CheckUseRequirements(int index, CCraftOperation *op, CWeenie
 			DWORD value = 0;
 
 
-			DEBUG_DATA << "InqDataID (Player.cpp:2067): " << requirementTarget->id << " " "... ";
-
 			bool exists = requirementTarget->m_Qualities.InqDataID(dIDRequirement._stat, value);
 
 			switch (dIDRequirement._operationType)
@@ -2282,7 +2242,7 @@ void CPlayerWeenie::PerformUseModificationScript(DWORD scriptId, CCraftOperation
 	switch (scriptId)
 	{
 	case 0x3800000f: //flag stamp failure
-		//not sure what is supposed to be done here.
+					 //not sure what is supposed to be done here.
 		break;
 	case 0x38000011: //steel
 		pTarget->m_Qualities.SetInt(ARMOR_LEVEL_INT, pTarget->InqIntQuality(ARMOR_LEVEL_INT, 0, TRUE) + 20);
@@ -3208,7 +3168,7 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 	//SALVAGING SKILL DETERMINES SALVAGE AMOUNT
 	DWORD salvagingSkillValue;
 	InqSkill(STypeSkill::SALVAGING_SKILL, salvagingSkillValue, false);
-	
+
 	DWORD highestTinkeringSkillValue;
 	DWORD tinkeringSkills[4];
 	InqSkill(STypeSkill::ARMOR_APPRAISAL_SKILL, tinkeringSkills[0], false);
@@ -3217,10 +3177,6 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 	InqSkill(STypeSkill::ITEM_APPRAISAL_SKILL, tinkeringSkills[3], false);
 
 	highestTinkeringSkillValue = max(max(max(tinkeringSkills[0], tinkeringSkills[1]), tinkeringSkills[2]), tinkeringSkills[3]);
-	
-	// Classic GDL seems to have no salvaging skill, therefore highestTinkeringsSkill = salvagingSkill
-	salvagingSkillValue = highestTinkeringSkillValue;
-	//SendText(csprintf("SalvageSkill: %d", salvagingSkillValue), LTT_DEFAULT);
 
 	int numAugs = max(0, min(4, InqIntQuality(AUGMENTATION_BONUS_SALVAGE_INT, 0)));
 
@@ -3282,8 +3238,7 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 			int salvageAmount = max(salvagingAmount, tinkeringAmount);
 
 			// formula taken from http://asheron.wikia.com/wiki/Salvaging/Value_Pre2013
-			int salvageValue = itemValue * ( salvagingSkillValue / 387.0 ) *(1 + numAugs * 0.25);
-			
+			int salvageValue = itemValue * (salvagingSkillValue / 387.0) *(1 + numAugs * 0.25);
 			salvageMap[material].totalValue += salvageValue;
 			salvageMap[material].amount += salvageAmount;
 			salvageMap[material].itemsSalvagedCountCont++;
@@ -3317,7 +3272,7 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 		SalvageInfo salvageInfo = salvageEntry.second;
 		int valuePerUnit = salvageInfo.totalValue / salvageInfo.amount;
 
-		double workmanship = salvageInfo.totalWorkmanship/(double)salvageInfo.itemsSalvagedCountCont;
+		double workmanship = salvageInfo.totalWorkmanship / (double)salvageInfo.itemsSalvagedCountCont;
 		int fullBagItems = ceil(salvageInfo.itemsSalvagedCountCont / (salvageInfo.amount / 100.0));
 
 		int remainingAmount = salvageInfo.amount;
@@ -3332,7 +3287,7 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 			SalvageResult salvageResult;
 			salvageResult.material = material;
 			salvageResult.units = amount;
-			salvageResult.workmanship = floor(numItems * workmanship)/(double)numItems;
+			salvageResult.workmanship = floor(numItems * workmanship) / (double)numItems;
 			salvageResults.push_back(salvageResult);
 
 			remainingAmount -= 100;
@@ -3355,7 +3310,7 @@ void CPlayerWeenie::PerformSalvaging(DWORD toolId, PackableList<DWORD> items)
 // and http://web.archive.org/web/20170130194012/http://www.thejackcat.com/AC/Shopping/Crafts/Salvage.htm
 int CPlayerWeenie::CalculateSalvageAmount(int salvagingSkill, int workmanship, int numAugs)
 {
-	return 1 + floor( salvagingSkill/195.0 * workmanship * (1 + 0.25*numAugs) );
+	return 1 + floor(salvagingSkill / 195.0 * workmanship * (1 + 0.25*numAugs));
 }
 
 bool CPlayerWeenie::SpawnSalvageBagInContainer(MaterialType material, int amount, int workmanship, int value, int numItems)
