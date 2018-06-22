@@ -2057,6 +2057,7 @@ CLIENT_COMMAND(setplayer, "[wcid]", "Sets your Player Character defaults to that
 }
 #endif
 
+
 CLIENT_COMMAND(setname, "[name]", "Changes the last assessed target's name.", ADMIN_ACCESS)
 {
 	if (argc < 1)

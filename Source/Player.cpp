@@ -1,4 +1,3 @@
-
 #include "StdAfx.h"
 #include "WeenieObject.h"
 #include "PhysicsObj.h"
@@ -665,6 +664,43 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, DWORD kil
 				value /= 2;
 			}
 		}
+		// 50% value of second+ instance of itemValueList
+		// used 2 multimaps so i could count. hackjob.
+		std::multimap<int, CWeenieObject *> tmpVLint;
+		std::multimap<std::string, int> tmpVLstr;
+		std::string objName;
+		for (auto iter = itemValueList.begin(); iter != itemValueList.end(); ++iter)
+		{
+			tmpVLint.insert(std::pair<int, CWeenieObject *>(iter->first, iter->second));
+			tmpVLstr.insert(std::pair<std::string, int>(iter->second->InqStringQuality(NAME_STRING, objName), iter->first));
+		}
+
+		std::multimap<int, CWeenieObject *> finaliVL;
+		int amtOfEleN = 0;
+		int amtOfEleV = 0;
+		int inFinal = 0;
+		int curval = 0;
+		int nVal = 0;
+		for (auto iterI = tmpVLint.begin(); iterI != tmpVLint.end(); ++iterI)
+		{
+			for (auto iterS = tmpVLstr.begin(); iterS != tmpVLstr.end(); ++iterS)
+			{
+				amtOfEleN = tmpVLstr.count(iterS->first);
+				amtOfEleV = tmpVLint.count(iterI->first);
+				inFinal = finaliVL.count(iterI->first);
+				curval = iterI->first;
+				nVal = iterI->first / 2;
+				break;
+			}
+			if (amtOfEleV > 1 && amtOfEleN > 1 && inFinal > 0)
+				finaliVL.insert(std::pair<int, CWeenieObject *>(nVal, iterI->second));
+
+			else
+				finaliVL.insert(std::pair<int, CWeenieObject *>(curval, iterI->second));
+		}
+		//@dropitemsondeath on
+
+
 		else // not a stack
 		{
 			int value = item->GetValue();
@@ -706,8 +742,7 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, DWORD kil
 	}
 
 	// START item dropping BY VALUE
-	for (auto iter = itemValueList.rbegin(); iter != itemValueList.rend(); ++iter)
-	{
+	for (auto iter = finaliVL.rbegin(); iter != finaliVL.rend(); ++iter) {
 		if (itemsLost >= amountOfItemsToDrop)
 		{
 			break;
@@ -731,8 +766,10 @@ void CPlayerWeenie::CalculateAndDropDeathItems(CCorpseWeenie *pCorpse, DWORD kil
 			itemsLostText.append(", your ");
 		else
 			itemsLostText.append("your ");
+		int stackSize = itemToDrop->InqIntQuality(STACK_SIZE_INT, 1);
+		itemsLostText.append(itemToDrop->GetName());
+		break;
 
-		itemsLostText.append(iter->second->GetName());
 	}
 
 	itemsLostText.append("!");

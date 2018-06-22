@@ -51,7 +51,7 @@ void CalculateDamage(DamageEventData *dmgEvent, SpellCastData *spellData)
 	}
 
 	if (dmgEvent->damage_form == DF_MAGIC && !dmgEvent->source->AsPlayer())
-		damageCalc /= 2; //creatures do half magic damage. Unconfirmed but feels right. Should this be projectile spells only?
+	damageCalc /= 2; //creatures do half magic damage. Unconfirmed but feels right. Should this be projectile spells only?
 
 	dmgEvent->damageBeforeMitigation = dmgEvent->damageAfterMitigation = damageCalc;
 }
@@ -332,14 +332,16 @@ void CalculateRendingAndMiscData(DamageEventData *dmgEvent)
 		switch (dmgEvent->damage_form)
 		{
 		case DF_MELEE:
-			dmgEvent->rendingMultiplier = max(GetImbueMultiplier(dmgEvent->attackSkillLevel, 0, 400, 2.5), 1.0f);
+			dmgEvent->rendingMultiplier = GetImbueMultiplier(dmgEvent->attackSkillLevel, 150, 400, 1.5); //made up formula.
 			break;
 		case DF_MISSILE:
 
-			dmgEvent->rendingMultiplier = max(0.25 + GetImbueMultiplier(dmgEvent->attackSkillLevel, 0, 360, 2.25), 1.0f);
+			dmgEvent->rendingMultiplier = GetImbueMultiplier(dmgEvent->attackSkillLevel, 120, 360, 1.5); //made up formula.
 			break;
 		case DF_MAGIC:
-			dmgEvent->rendingMultiplier = max(0.25 + GetImbueMultiplier(dmgEvent->attackSkillLevel, 0, 360, 2.25), 1.0f);
+			dmgEvent->rendingMultiplier = GetImbueMultiplier(dmgEvent->attackSkillLevel, 125, 360, 1.0); //made up formula.
+	else
+		dmgEvent->rendingMultiplier = GetImbueMultiplier(dmgEvent->attackSkillLevel, 150, 400, 1.5); //made up formula.
 			break;
 		default:
 			return;
